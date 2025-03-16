@@ -1,0 +1,2 @@
+/Users/guangqianma/Desktop/COMP0016UNITY/ubiq-genie/Unity/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/cpp/CMakeLists.txt
+/Users/guangqianma/Desktop/COMP0016UNITY/ubiq-genie/Unity/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/cpp/FramePacing/CMakeLists.txt
