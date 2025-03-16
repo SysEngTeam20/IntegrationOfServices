@@ -323,6 +323,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 20000000, guid: be4a7509f1153450fac59ebfeb30bac6, type: 2}
     - target: {fileID: 5193482398898430800, guid: c194d24fa5eef42d5b3b77b89586a8fd, type: 3}
+      propertyPath: useLocalTestFile
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5193482398898430800, guid: c194d24fa5eef42d5b3b77b89586a8fd, type: 3}
       propertyPath: editorSceneFilePath
       value: /Users/guangqianma/Desktop/M/SceneConfig.json
       objectReference: {fileID: 0}

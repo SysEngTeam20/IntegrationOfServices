@@ -1,0 +1,1 @@
+/Users/guangqianma/Desktop/COMP0016UNITY/ubiq-genie/Unity/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/Debug/236p5p2v/obj/armeabi-v7a
