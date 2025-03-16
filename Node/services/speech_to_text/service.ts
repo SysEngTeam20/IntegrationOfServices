@@ -24,6 +24,8 @@ class SpeechToTextService extends ServiceController {
             this.registerChildProcess(peer.uuid, 'python', [
                 '-u',
                 path.join(path.dirname(fileURLToPath(import.meta.url)), 'transcribe_ibm.py'),
+                '--peer',
+                peer.uuid
             ]);
         });
 
@@ -31,6 +33,11 @@ class SpeechToTextService extends ServiceController {
             this.log('Ending speech-to-text process for peer ' + peer.uuid);
             this.killChildProcess(peer.uuid);
         });
+    }
+
+    sendToChildProcess(identifier: string, data: Buffer): void {
+        this.log(`Received audio data for peer ${identifier}, size: ${data.length} bytes`);
+        super.sendToChildProcess(identifier, data);
     }
 }
 

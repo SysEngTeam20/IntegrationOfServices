@@ -63,6 +63,7 @@ export class ConversationalAgent extends ApplicationController {
             const sampleBuffer = Buffer.from(data.samples.buffer);
 
             if (this.roomClient.peers.get(uuid) !== undefined) {
+                this.log(`Received audio data from peer ${uuid}, sending to STT service. Samples length: ${data.samples.length}`);
                 this.components.speech2text?.sendToChildProcess(uuid, sampleBuffer);
             }
         });
@@ -108,17 +109,44 @@ export class ConversationalAgent extends ApplicationController {
 
         this.components.textToSpeechService?.on('data', (data: Buffer, identifier: string) => {
             let response = data;
+            const totalLength = data.length;
+            
+            this.log(`Received audio data from TTS service. Total size: ${totalLength} bytes.`);
 
+            // First send the AudioInfo message with metadata about the audio
             this.scene.send(new NetworkId(95), {
                 type: 'AudioInfo',
                 targetPeer: this.targetPeer,
-                audioLength: data.length,
+                audioLength: totalLength,
+                sampleRate: 44100,  // Match the sample rate set in text_to_speech_ibm.py
+                channels: 1,        // Mono audio
+                bitsPerSample: 16,  // 16-bit PCM
             });
+            
+            // Use a smaller chunk size of 4096 bytes which is more standard for audio processing
+            const chunkSize = 4096;
+            let chunkIndex = 0;
+            const totalChunks = Math.ceil(response.length / chunkSize);
+            
+            this.log(`Sending audio in ${totalChunks} chunks of ${chunkSize} bytes each.`);
 
+            // Send chunks with index information to help Unity reconstruct them in order
             while (response.length > 0) {
-                this.scene.send(new NetworkId(95), response.slice(0, 16000));
-                response = response.slice(16000);
+                const chunk = response.slice(0, chunkSize);
+                
+                // Send the chunk with metadata to help Unity reconstruct the audio
+                this.scene.send(new NetworkId(95), {
+                    type: 'AudioData',
+                    chunkIndex: chunkIndex,
+                    totalChunks: totalChunks,
+                    data: chunk
+                });
+                
+                response = response.slice(chunkSize);
+                chunkIndex++;
             }
+            
+            this.log(`Finished sending all ${chunkIndex} audio chunks.`);
         });
     }
 }

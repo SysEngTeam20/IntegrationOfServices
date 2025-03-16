@@ -1,0 +1,362 @@
+# Speech-to-Text Integration Debugging Log
+
+## Overview
+This document chronicles the debugging process for the speech-to-text functionality in the Ubiq Genie conversational agent. Each issue is documented with its root cause and the specific code changes that resolved it.
+
+## Environment Setup Issues
+
+### 1. Python Dependencies
+**Issue:** Missing IBM Watson SDK and other required Python libraries
+**Resolution:**
+```bash
+# Activate virtual environment
+source venv/bin/activate
+
+# Install all dependencies
+pip install -r requirements.txt
+```
+
+### 2. Environment Variables
+**Issue:** Application couldn't detect environment variables from .env.local
+**Resolution:** Explicitly provide environment variables at runtime:
+```bash
+# Launch with all required environment variables
+IBM_TTS_API_KEY="ux3bRMfZt5JCEWCSKnlIUAbHMjG6JwfhZr-DO2vDJtle" \
+IBM_TTS_SERVICE_URL="https://api.eu-gb.text-to-speech.watson.cloud.ibm.com/instances/3e7c35d2-5dbf-4e0f-a49f-dab1618a3fd1" \
+IBM_STT_API_KEY="ux3bRMfZt5JCEWCSKnlIUAbHMjG6JwfhZr-DO2vDJtle" \
+IBM_STT_SERVICE_URL="https://api.eu-gb.speech-to-text.watson.cloud.ibm.com/instances/37a7e3a4-174f-4513-80eb-d2e003bf7179" \
+API_SECRET_KEY="YrFvjWY7a6RUEZyu" \
+API_BASE_URL="http://localhost:3000" \
+ACTIVITY_ID="81cd9844-3645-442e-9bf4-a6e7803a4870" \
+npm start conversational_agent
+```
+
+### 3. Package Version Conflicts
+**Issue 1:** IBM Watson SDK version mismatch - `AudioSource.__init__() got an unexpected keyword argument 'content_type'`
+**Resolution:** Modified transcribe_ibm.py to remove the incompatible parameter.
+
+**Issue 2:** Corrupted sentence_transformers installation
+**Resolution:**
+```bash
+# Reinstall with specific version
+pip uninstall -y sentence-transformers && pip install sentence-transformers==3.3.1
+```
+
+## Audio Pipeline Issues
+
+### 1. Peer ID Not Being Passed Correctly
+**Issue:** STT service using placeholder peer ID (`00000000-0000-0000-0000-000000000000`) instead of actual peer UUID
+**Resolution:** Modified `Node/services/speech_to_text/service.ts`:
+```typescript
+// Before: Peer ID not passed to Python script
+this.registerChildProcess(peer.uuid, 'python', [
+    '-u',
+    path.join(path.dirname(fileURLToPath(import.meta.url)), 'transcribe_ibm.py')
+]);
+
+// After: Peer ID correctly passed to Python script
+this.registerChildProcess(peer.uuid, 'python', [
+    '-u',
+    path.join(path.dirname(fileURLToPath(import.meta.url)), 'transcribe_ibm.py'),
+    '--peer',
+    peer.uuid  // Added this parameter
+]);
+```
+
+### 2. Audio Data Handling in Python Script
+**Issue:** Audio data sent to Python script not being properly processed by IBM Watson API
+**Resolution:** Implemented several fixes in `Node/services/speech_to_text/transcribe_ibm.py`:
+
+1. Created custom `DebugAudioSource` class with improved stream handling:
+```python
+class DebugAudioSource(AudioSource):
+    def __init__(self, input_stream, is_recording=True):
+        super().__init__(input_stream, is_recording)
+        self.bytes_read = 0
+        self.last_read_time = time.time()
+        
+    def read(self, size):
+        try:
+            # Read data from stdin with proper error handling
+            chunk = self._input.read(size)
+            if chunk:
+                self.bytes_read += len(chunk)
+                self.last_read_time = time.time()
+                print(f"Read {len(chunk)} bytes from input stream, total: {self.bytes_read}", file=sys.stderr)
+                return chunk
+            else:
+                # Prevent CPU spinning when no data is available
+                time.sleep(0.1)
+                return b''
+        except Exception as e:
+            print(f"Error reading from input stream: {str(e)}", file=sys.stderr)
+            return b''
+```
+
+2. Added callback data monitoring:
+```python
+def on_data(self, data):
+    # Track when data is received from Watson API
+    print(f"Received data from Watson API", file=sys.stderr)
+    self.last_data_time = time.time()
+```
+
+3. Added explicit stdout flushing to ensure data is sent to Node.js:
+```python
+def on_transcription(self, transcript):
+    print(f"Got transcription result!", file=sys.stderr)
+    print(f"Transcript data: {json.dumps(transcript)}", file=sys.stderr)
+    if len(transcript) > 0:
+        print(">{}".format(transcript[0].get('transcript', '')))
+        sys.stdout.flush()  # Critical line to ensure data is sent to Node.js
+```
+
+4. Optimized Watson API configuration:
+```python
+speech_to_text.recognize_using_websocket(
+    audio=audio_source,
+    content_type='audio/l16; rate=48000',  # Specify exact audio format
+    recognize_callback=my_callback,
+    model='en-US_BroadbandModel',
+    interim_results=True,  # Get partial results for better responsiveness
+    inactivity_timeout=-1,  # Disable inactivity timeout
+    max_alternatives=3  # Get multiple alternative transcriptions
+)
+```
+
+### 3. Resource Management
+**Issue:** CPU and resource exhaustion affecting audio processing
+**Resolution:** Added strategic pauses throughout the code:
+```python
+# In no-data condition in read method
+time.sleep(0.1)  # Prevent CPU spinning
+
+# In main recognition loop
+while not my_callback.done:
+    try:
+        time.sleep(0.1)  # Reduced CPU usage compared to pass
+    except KeyboardInterrupt:
+        break
+    except Exception as e:
+        print(f"Error during recognition: {str(e)}", file=sys.stderr)
+        break
+```
+
+## Error Handling Improvements
+
+### 1. Python Process Exception Handling
+**Issue:** Unhandled exceptions causing silent failures
+**Resolution:** Added structured error handling in `transcribe_ibm.py`:
+```python
+try:
+    recognize_from_stdin(args.peer)
+    print("IBM Watson Speech client stopped receiving chunks.")
+except Exception as e:
+    print(f"Error in speech recognition service: {str(e)}", file=sys.stderr)
+    sys.exit(1)
+```
+
+### 2. EPIPE Error on Process Termination
+**Issue:** Application crashing with EPIPE errors when terminating processes
+**Resolution:** Added proper exception handling in the main process loop:
+```python
+while not my_callback.done:
+    try:
+        time.sleep(0.1)
+    except KeyboardInterrupt:
+        break
+    except Exception as e:
+        print(f"Error during recognition: {str(e)}", file=sys.stderr)
+        break
+```
+
+## Debugging Visibility Enhancements
+
+### 1. Audio Pipeline Logging
+**Issue:** Lack of visibility into audio data flow made debugging difficult
+**Resolution:** Added detailed logging throughout the pipeline:
+
+1. In `Node/apps/conversational_agent/app.ts`:
+```typescript
+this.components.mediaReceiver?.on('audio', (uuid: string, data: RTCAudioData) => {
+    const sampleBuffer = Buffer.from(data.samples.buffer);
+
+    if (this.roomClient.peers.get(uuid) !== undefined) {
+        this.log(`Received audio data from peer ${uuid}, sending to STT service. Samples length: ${data.samples.length}`);
+        this.components.speech2text?.sendToChildProcess(uuid, sampleBuffer);
+    }
+});
+```
+
+2. In `Node/services/speech_to_text/service.ts`:
+```typescript
+sendToChildProcess(identifier: string, data: Buffer): void {
+    this.log(`Received audio data for peer ${identifier}, size: ${data.length} bytes`);
+    super.sendToChildProcess(identifier, data);
+}
+```
+
+3. In `transcribe_ibm.py` - Added monitoring thread to track data flow:
+```python
+def monitor_stdin(audio_source, callback):
+    while not callback.done:
+        current_time = time.time()
+        if current_time - audio_source.last_read_time > 5:
+            print(f"No audio data received for 5 seconds. Total bytes read: {audio_source.bytes_read}", file=sys.stderr)
+            audio_source.last_read_time = current_time
+        if current_time - callback.last_data_time > 10:
+            print(f"No Watson API interaction for 10 seconds", file=sys.stderr)
+            callback.last_data_time = current_time
+        time.sleep(1)
+```
+
+## Verification of Success
+After implementing these fixes, the entire speech-to-text pipeline now works correctly:
+
+1. Audio data is captured in Unity and sent to the Node.js server
+2. The SpeechToTextService correctly passes the audio to the Python script with the proper peer ID
+3. The Python script successfully processes the audio and sends it to IBM Watson
+4. Watson returns transcription results that are sent back to the Node.js server
+5. The transcription is sent to the text generation service which generates a response
+
+Example log showing successful operation:
+```
+[Virtual Assistant] Received audio data from peer 07fac160-df5a-4aa0-9b19-cae9a858830b, sending to STT service. Samples length: 480
+[SpeechToTextService] Received audio data for peer 07fac160-df5a-4aa0-9b19-cae9a858830b, size: 960 bytes
+[transcribe_ibm.py] Got transcription result!
+[transcribe_ibm.py] Transcript data: [{"confidence": 0.98, "transcript": "hello "}, {"transcript": "hello I "}, {"transcript": "hello hi "}]
+[Virtual Assistant] Brave Snake -> Agent:: hello
+[TextGenerationService] Final response: Agent -> Hello, Brave Snake. How can I assist you today?
+```
+
+# Audio Problems in Ubiq-Genie: Diagnosis and Fixes
+
+## Overview
+This document summarizes the speech-to-text and text-to-speech issues found in the Ubiq-Genie conversational agent and the solutions that were implemented.
+
+## 1. Speech-to-Text (STT) Issues
+
+### Problem: Audio Data Not Being Processed
+- **Symptoms**: Audio data was being received from Unity client but not properly processed by the IBM Watson API.
+- **Root Cause**: The audio data was being sent to the STT service but not being read correctly from stdin.
+- **Fix**: Added a `DebugAudioSource` class to monitor bytes read, added debugging messages, and ensured the data was being properly processed.
+
+```python
+# Key additions to transcribe_ibm.py
+class DebugAudioSource(audio.AudioSource):
+    def __init__(self, source, chunk_size=1024, is_recording=False):
+        # ... existing initialization ...
+        self.total_bytes_read = 0
+        
+    def read(self, size):
+        data = self.source.read(size)
+        if data:
+            self.total_bytes_read += len(data)
+        return data
+```
+
+## 2. Text-to-Speech (TTS) Issues
+
+### Problem: Environment Variables Not Being Passed
+- **Symptoms**: TTS service failing with "Cannot synthesize speech: TTS service not initialized properly" error.
+- **Root Cause**: Environment variables (IBM_TTS_API_KEY and IBM_TTS_SERVICE_URL) weren't being properly passed to the child process.
+- **Fix**: Modified the `registerChildProcess` method to explicitly pass environment variables to child processes:
+
+```typescript
+// In service.ts
+registerChildProcess(identifier: string, command: string, options: Array<string>): ChildProcess {
+    // ... existing code ...
+    
+    try {
+        // Explicitly pass the environment variables to the child process
+        const env = { ...process.env };
+        
+        // Log the important environment variables to help with debugging
+        if (this.name === 'TextToSpeechService') {
+            this.log(`Environment variables for TTS: IBM_TTS_API_KEY=${env.IBM_TTS_API_KEY ? env.IBM_TTS_API_KEY.substring(0, 5) + '...' : 'Not set'}, IBM_TTS_SERVICE_URL=${env.IBM_TTS_SERVICE_URL || 'Not set'}`);
+        }
+        
+        this.childProcesses[identifier] = spawn(command, options, { env });
+    } catch (e) {
+        // ... error handling ...
+    }
+    
+    // ... rest of the method ...
+}
+```
+
+### Problem: Audio Format Compatibility
+- **Symptoms**: Only a "pop" sound being heard in Unity instead of speech.
+- **Root Cause**: The audio format (sample rate, chunk size) may not be compatible with Unity.
+- **Fix**: 
+  1. Changed the sample rate from 48kHz to 44.1kHz in the TTS service:
+  ```python
+  # In text_to_speech_ibm.py
+  result = synthesizer.synthesize(
+      text,
+      voice='en-US-MichaelV3Voice',
+      accept='audio/l16;rate=44100'  # Changed from 48000
+  ).get_result().content
+  ```
+  
+  2. Improved audio metadata and chunking in app.ts:
+  ```typescript
+  // In app.ts
+  this.scene.send(new NetworkId(95), {
+      type: 'AudioInfo',
+      targetPeer: this.targetPeer,
+      audioLength: totalLength,
+      sampleRate: 44100,  // Match the sample rate in text_to_speech_ibm.py
+      channels: 1,        // Mono audio
+      bitsPerSample: 16,  // 16-bit PCM
+  });
+  
+  // Use a smaller chunk size which is more standard for audio processing
+  const chunkSize = 4096;
+  ```
+
+## 3. Debug Logging Improvements
+
+### Problem: Lack of Visibility into Audio Processing
+- **Symptoms**: Difficult to diagnose issues because of limited logging.
+- **Fix**: Added extensive debugging throughout the audio pipeline:
+  1. Logging audio data sizes at each step of processing
+  2. Tracking and reporting audio bytes read
+  3. Saving debug audio files for inspection
+  4. Monitoring for inactivity in audio stream
+
+```python
+# In text_to_speech_ibm.py
+def save_debug_audio(audio_data, filename="debug_output.wav"):
+    """Save audio data to a WAV file for debugging."""
+    try:
+        with wave.open(filename, 'wb') as wf:
+            wf.setnchannels(1)  # mono
+            wf.setsampwidth(2)  # 16-bit
+            wf.setframerate(44100)  # 44.1kHz
+            wf.writeframes(audio_data)
+        print(f"Saved audio to {filename} for debugging", file=sys.stderr)
+    except Exception as e:
+        print(f"Error saving debug audio: {str(e)}", file=sys.stderr)
+```
+
+## 4. Additional Environment Variable Management
+
+### Problem: Environment Variables Not Persisting
+- **Symptoms**: Variables manually set at runtime not being available to child processes.
+- **Fix**: 
+  1. Modified service controller to log environment variables for each service
+  2. Added fallback behavior when environment variables are missing
+  3. Made error messages more descriptive for better troubleshooting
+
+## Conclusion
+
+The changes implemented have significantly improved the reliability of the audio pipeline in Ubiq-Genie. The system can now successfully:
+
+1. Capture audio from the Unity client
+2. Process it through the IBM Watson STT API 
+3. Generate appropriate responses 
+4. Convert responses to audio via the IBM Watson TTS API
+5. Send properly formatted audio back to Unity for playback
+
+Future improvements could include more robust error handling, automated testing of the audio pipeline, and further optimization of audio format parameters for Unity compatibility.
