@@ -76,10 +76,20 @@ public class AdminObjectSelector : MonoBehaviour
             Destroy(handlePoint.GetComponent<Collider>());
             handlePoint.GetComponent<Renderer>().material.color = beamIdleColor;
         }
+        
+        // Check if we're starting disabled
+        if (!enabled)
+        {
+            HideAllVisuals();
+        }
     }
 
     void Update()
     {
+        // Exit if disabled
+        if (!enabled)
+            return;
+            
         UpdateTractorBeam();
         
         // Object selection with left mouse button
@@ -161,6 +171,14 @@ public class AdminObjectSelector : MonoBehaviour
 
     void UpdateTractorBeam()
     {
+        // Hide beam when disabled
+        if (!enabled)
+        {
+            if (tractorBeam != null)
+                tractorBeam.enabled = false;
+            return;
+        }
+        
         // Set beam start position at handle point
         Vector3 beamStart = adminCamera.transform.TransformPoint(beamOriginOffset);
         tractorBeam.SetPosition(0, beamStart);
@@ -201,5 +219,61 @@ public class AdminObjectSelector : MonoBehaviour
     public GameObject GetSelectedObject()
     {
         return selectedObject;
+    }
+    
+    // This methods hides all tractor beam visuals and clears selection
+    private void HideAllVisuals()
+    {
+        // Clear any active selection
+        ClearSelection();
+        
+        // Disable beam renderer explicitly
+        if (tractorBeam != null)
+        {
+            tractorBeam.enabled = false;
+        }
+        
+        // Hide handle point by making it tiny or invisible
+        if (showHandlePoint && handlePoint != null)
+        {
+            handlePoint.GetComponent<Renderer>().enabled = false;
+        }
+    }
+    
+    // Clear current selection and reset visual state
+    private void ClearSelection()
+    {
+        if (selectedObject != null)
+        {
+            Renderer renderer = GetRendererFromObject(selectedObject);
+            if (renderer != null)
+            {
+                renderer.material.color = originalColor;
+            }
+            selectedObject = null;
+        }
+    }
+    
+    // Reset visual state when component is enabled
+    private void OnEnable()
+    {
+        // Renable beam
+        if (tractorBeam != null)
+        {
+            tractorBeam.enabled = true;
+        }
+        
+        // Show handle point
+        if (showHandlePoint && handlePoint != null)
+        {
+            handlePoint.GetComponent<Renderer>().enabled = true;
+            handlePoint.GetComponent<Renderer>().material.color = beamIdleColor;
+        }
+    }
+    
+    // Hide visuals and clear selection when component is disabled
+    private void OnDisable()
+    {
+        HideAllVisuals();
     }
 }
