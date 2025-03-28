@@ -9,7 +9,7 @@ using UnityEngine.UI;
 public class VRViewerManager : MonoBehaviour
 {
     [Header("Configuration")]
-    public PortaltServerConfig serverConfig;
+    public PortaltServerConfigV serverConfig;
     
     [Header("Activity ID")]
     [Tooltip("ID of the activity to automatically load on start")]
@@ -31,7 +31,6 @@ public class VRViewerManager : MonoBehaviour
     private PortaltAPIClient apiClient;
     private PortaltSceneLoader sceneLoader;
     
-    // Start is called before the first frame update
     void Start()
     {
         Debug.Log("VRViewerManager starting...");
@@ -46,14 +45,14 @@ public class VRViewerManager : MonoBehaviour
         SetupComponents();
         
         // Check if we need a joincode first
-        if (requireJoincode && string.IsNullOrEmpty(serverConfig.pairingCode))
+        if (requireJoincode && string.IsNullOrEmpty(serverConfig.joinCode))
         {
             ShowJoincodeUI();
         }
         // Auto-load the content if not requiring joincode or already have one
         else if (loadOnStart)
         {
-            StartCoroutine(LoadActivityWithDelay());
+            StartCoroutine(LoadWithDelay());
         }
     }
     
@@ -74,7 +73,6 @@ public class VRViewerManager : MonoBehaviour
         {
             GameObject apiClientObj = new GameObject("PortaltAPIClient");
             apiClient = apiClientObj.AddComponent<PortaltAPIClient>();
-            apiClient.serverConfig = serverConfig;
             apiClientObj.transform.SetParent(transform);
             DontDestroyOnLoad(apiClientObj);
         }
@@ -85,7 +83,6 @@ public class VRViewerManager : MonoBehaviour
         {
             GameObject loaderObj = new GameObject("PortaltSceneLoader");
             sceneLoader = loaderObj.AddComponent<PortaltSceneLoader>();
-            sceneLoader.serverConfig = serverConfig;
             loaderObj.transform.SetParent(transform);
             DontDestroyOnLoad(loaderObj);
         }
@@ -99,14 +96,23 @@ public class VRViewerManager : MonoBehaviour
         // Ensure components have the server config
         if (serverConfig != null)
         {
-            apiClient.serverConfig = serverConfig;
+            // We need to create a temporary standard config for the API client
+            // since it expects the standard config format
+            var tempConfig = ScriptableObject.CreateInstance<PortaltServerConfig>();
+            tempConfig.serverIp = serverConfig.serverIp;
+            tempConfig.serverPort = serverConfig.serverPort;
+            tempConfig.pairingCode = serverConfig.joinCode; // Map joinCode to pairingCode
+            
+            apiClient.serverConfig = tempConfig;
+            
+            // For scene loader, we can directly assign our ConfigV since it now accepts ScriptableObject
             sceneLoader.serverConfig = serverConfig;
             
             Debug.Log($"Components set up with server IP: {serverConfig.serverIp}");
         }
         else
         {
-            Debug.LogError("No server config assigned! Please create and assign a PortaltServerConfig asset.");
+            Debug.LogError("No server config assigned! Please create and assign a PortaltServerConfigV asset.");
         }
     }
     
@@ -128,13 +134,161 @@ public class VRViewerManager : MonoBehaviour
     /// <summary>
     /// Wait a short time before loading to ensure all systems are initialized
     /// </summary>
-    private IEnumerator LoadActivityWithDelay()
+    private IEnumerator LoadWithDelay()
     {
         // Wait for a brief moment to ensure everything is initialized
         yield return new WaitForSeconds(0.5f);
         
-        // Begin loading specified activity
-        LoadActivity();
+        // Begin loading from the join URL
+        LoadFromJoinCode();
+    }
+    
+    /// <summary>
+    /// Load content using the joinCode
+    /// </summary>
+    public void LoadFromJoinCode()
+    {
+        if (serverConfig == null)
+        {
+            Debug.LogError("Cannot load: serverConfig is null!");
+            return;
+        }
+        
+        if (string.IsNullOrEmpty(serverConfig.joinCode))
+        {
+            Debug.LogError("Cannot load: joinCode is empty!");
+            return;
+        }
+        
+        // Ensure scene loader is initialized
+        if (sceneLoader == null)
+        {
+            Debug.LogError("Cannot load: scene loader is not initialized!");
+            SetupComponents(); // Try to set up components again
+            
+            if (sceneLoader == null)
+            {
+                Debug.LogError("Failed to initialize scene loader!");
+                return;
+            }
+        }
+        
+        if (LoadingScreenManager.Instance != null)
+        {
+            LoadingScreenManager.Instance.ShowLoadingScreen("Loading content...");
+        }
+        
+        Debug.Log($"Loading content with join code: {serverConfig.joinCode}");
+        
+        // Use direct fetch from the join URL to get scene configuration
+        StartCoroutine(FetchAndLoadFromJoinUrl());
+    }
+    
+    /// <summary>
+    /// Fetch scene configuration directly from join URL and load it
+    /// </summary>
+    private IEnumerator FetchAndLoadFromJoinUrl()
+    {
+        if (serverConfig == null)
+        {
+            Debug.LogError("Cannot fetch: serverConfig is null!");
+            yield break;
+        }
+        
+        string url = serverConfig.GetActivityJoinUrl();
+        Debug.Log($"Fetching content from join URL: {url}");
+        
+        // Use scene loader to directly load from the join URL
+        // We use a dummy scene ID since the actual URL is already formed in the config
+        bool success = false;
+        
+        // Verify scene loader is available
+        if (sceneLoader == null)
+        {
+            Debug.LogError("Cannot load: scene loader is not initialized!");
+            
+            if (LoadingScreenManager.Instance != null)
+            {
+                LoadingScreenManager.Instance.HideLoadingScreen();
+            }
+            
+            yield break;
+        }
+        
+        // Wrap the task in a helper coroutine without try-catch
+        yield return ExecuteSceneLoading("dummy", result => success = result);
+        
+        if (success)
+        {
+            Debug.Log("Successfully loaded content from join URL");
+        }
+        else
+        {
+            Debug.LogError("Failed to load content from join URL");
+            
+            if (LoadingScreenManager.Instance != null)
+            {
+                LoadingScreenManager.Instance.HideLoadingScreen();
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Helper method to wrap the async scene loading in a coroutine-friendly way
+    /// </summary>
+    private IEnumerator ExecuteSceneLoading(string sceneId, System.Action<bool> callback)
+    {
+        if (sceneLoader == null)
+        {
+            Debug.LogError("Cannot execute scene loading: scene loader is null!");
+            callback(false);
+            yield break;
+        }
+        
+        bool success = false;
+        
+        // Create a simple state machine to handle errors without yielding in try/catch
+        var task = sceneLoader.LoadSceneFromApi(sceneId);
+        if (task == null)
+        {
+            Debug.LogError("Task from LoadSceneFromApi is null!");
+            callback(false);
+            yield break;
+        }
+        
+        var loadingOperation = task.AsManualEnumerator(result => success = result);
+        if (loadingOperation == null)
+        {
+            Debug.LogError("Manual enumerator is null!");
+            callback(false);
+            yield break;
+        }
+        
+        // This is outside of try/catch - yielding is safe here
+        while (true)
+        {
+            try
+            {
+                if (!loadingOperation.MoveNext())
+                    break;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Error loading from URL: {ex.Message}");
+                
+                if (LoadingScreenManager.Instance != null)
+                {
+                    LoadingScreenManager.Instance.HideLoadingScreen();
+                }
+                
+                callback(false);
+                yield break;
+            }
+            
+            yield return null; // Just yield a frame since Current is always null in our adapter
+        }
+        
+        callback(success);
     }
     
     /// <summary>
@@ -324,5 +478,78 @@ public class VRViewerManager : MonoBehaviour
         canvasGroup.interactable = false;
         
         Debug.Log("Loading screen created successfully");
+    }
+}
+
+// Helper extension method to convert Task<bool> to IEnumerator for coroutines
+public static class TaskExtensions
+{
+    public static IEnumerator AsIEnumerator(this System.Threading.Tasks.Task<bool> task, System.Action<bool> callback)
+    {
+        while (!task.IsCompleted)
+        {
+            yield return null;
+        }
+        
+        if (task.IsFaulted)
+        {
+            Debug.LogError($"Task faulted: {task.Exception}");
+            callback(false);
+        }
+        else
+        {
+            callback(task.Result);
+        }
+    }
+    
+    // New method that returns an enumerable for manual iteration
+    public static System.Collections.IEnumerator AsManualEnumerator(this System.Threading.Tasks.Task<bool> task, System.Action<bool> callback)
+    {
+        return new TaskToEnumeratorAdapter<bool>(task, callback);
+    }
+    
+    // Helper class for manual enumeration
+    private class TaskToEnumeratorAdapter<T> : System.Collections.IEnumerator
+    {
+        private System.Threading.Tasks.Task<T> _task;
+        private System.Action<T> _callback;
+        private bool _isComplete = false;
+        
+        public TaskToEnumeratorAdapter(System.Threading.Tasks.Task<T> task, System.Action<T> callback)
+        {
+            _task = task;
+            _callback = callback;
+        }
+        
+        public object Current => null;
+        
+        public bool MoveNext()
+        {
+            if (_isComplete)
+                return false;
+                
+            if (_task.IsCompleted)
+            {
+                _isComplete = true;
+                
+                if (_task.IsFaulted)
+                {
+                    throw _task.Exception;
+                }
+                else
+                {
+                    _callback(_task.Result);
+                }
+                
+                return false;
+            }
+            
+            return true;
+        }
+        
+        public void Reset()
+        {
+            throw new System.NotSupportedException();
+        }
     }
 } 

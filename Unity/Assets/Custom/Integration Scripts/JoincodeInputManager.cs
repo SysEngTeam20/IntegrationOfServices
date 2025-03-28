@@ -6,13 +6,13 @@ using TMPro;
 using Ubiq.Samples;
 
 /// <summary>
-/// Manages the joincode input UI for VR, using Ubiq's keyboard
+/// Manages the joincode input UI for VR
 /// </summary>
 public class JoincodeInputManager : MonoBehaviour
 {
     [Header("References")]
     public VRViewerManager vrViewerManager;
-    public PortaltServerConfig serverConfig;
+    public PortaltServerConfigV serverConfig;
     public ScriptableObject ubiqServerConfig; // Direct reference to the Ubiq ServerConfig asset
     
     [Header("UI Elements")]
@@ -93,13 +93,12 @@ public class JoincodeInputManager : MonoBehaviour
             }
         }
         
-        // Set up the keyboard input
+        // Set up event listeners
         if (keyboard != null)
         {
             keyboard.OnInput.AddListener(OnKeyboardInput);
         }
         
-        // Set up button events
         if (submitButton != null)
         {
             submitButton.onClick.AddListener(OnSubmitPressed);
@@ -149,6 +148,11 @@ public class JoincodeInputManager : MonoBehaviour
             if (serverPortInputField != null)
             {
                 serverPortInputField.text = serverConfig.serverPort.ToString();
+            }
+            
+            if (joincodeInputField != null && !string.IsNullOrEmpty(serverConfig.joinCode))
+            {
+                joincodeInputField.text = serverConfig.joinCode;
             }
         }
         
@@ -225,9 +229,6 @@ public class JoincodeInputManager : MonoBehaviour
     private void SetActiveInputField(TMP_InputField inputField)
     {
         activeInputField = inputField;
-        
-        // Visual feedback that this field is selected could be added here
-        // For example, highlighting the active field
     }
     
     public void ShowJoincodeUI()
@@ -279,6 +280,11 @@ public class JoincodeInputManager : MonoBehaviour
             if (serverPortInputField != null)
             {
                 serverPortInputField.text = serverConfig.serverPort.ToString();
+            }
+            
+            if (joincodeInputField != null && !string.IsNullOrEmpty(serverConfig.joinCode))
+            {
+                joincodeInputField.text = serverConfig.joinCode;
             }
         }
         
@@ -386,7 +392,7 @@ public class JoincodeInputManager : MonoBehaviour
     {
         if (serverConfig == null)
         {
-            Debug.LogError("Server config not found!");
+            Debug.LogError("No server config available!");
             return;
         }
         
@@ -398,8 +404,8 @@ public class JoincodeInputManager : MonoBehaviour
             string joincode = joincodeInputField.text.Trim();
             if (!string.IsNullOrEmpty(joincode))
             {
-                Debug.Log($"Setting pairing code to: {joincode}");
-                serverConfig.pairingCode = joincode;
+                Debug.Log($"Setting join code to: {joincode}");
+                serverConfig.joinCode = joincode;
                 configChanged = true;
             }
         }
@@ -462,10 +468,50 @@ public class JoincodeInputManager : MonoBehaviour
         
         if (configChanged)
         {
-            // Auto-load if VRViewerManager is available
-            if (vrViewerManager != null && !string.IsNullOrEmpty(vrViewerManager.activityIdToLoad))
+            // Make sure we have a reference to the VR viewer manager
+            if (vrViewerManager == null)
             {
-                vrViewerManager.LoadActivity();
+                Debug.LogWarning("VRViewerManager reference is missing, searching for it...");
+                vrViewerManager = FindObjectOfType<VRViewerManager>();
+                
+                if (vrViewerManager == null)
+                {
+                    Debug.LogError("Could not find VRViewerManager in the scene!");
+                    HideJoincodeUI();
+                    return;
+                }
+            }
+            
+            // Ensure the VR viewer manager has our config
+            if (vrViewerManager.serverConfig != serverConfig)
+            {
+                Debug.Log("Updating VRViewerManager with our server config");
+                vrViewerManager.serverConfig = serverConfig;
+            }
+            
+            // Force component setup on the viewer manager
+            Debug.Log("Setting up VR viewer manager components");
+            
+            // Call SetupComponents via reflection since it's private
+            System.Type viewerType = typeof(VRViewerManager);
+            System.Reflection.MethodInfo setupMethod = viewerType.GetMethod("SetupComponents", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            if (setupMethod != null)
+            {
+                setupMethod.Invoke(vrViewerManager, null);
+                Debug.Log("VRViewerManager components set up successfully");
+            }
+            
+            // Auto-load content using the joincode
+            if (!string.IsNullOrEmpty(serverConfig.joinCode))
+            {
+                Debug.Log("Calling LoadFromJoinCode on VRViewerManager");
+                vrViewerManager.LoadFromJoinCode();
+            }
+            else
+            {
+                Debug.LogWarning("Join code is empty, not loading content");
             }
             
             // Hide UI
@@ -540,8 +586,10 @@ public class JoincodeInputManager : MonoBehaviour
                     Debug.LogWarning("Could not find sendToPort field in Ubiq server config");
                 }
                 
-                // Mark the asset as dirty to save changes
+#if UNITY_EDITOR
+                // Mark the asset as dirty to save changes - Editor only
                 UnityEditor.EditorUtility.SetDirty(ubiqServerConfig);
+#endif
                 
                 Debug.Log("Ubiq server config updated successfully!");
             }

@@ -8,16 +8,17 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Samples/Ubiq/1.0.0-pre.11/Demo (XRI)/Demo.unity
     guid: 2de505d34345ab340bdde30d419b24eb
-  - enabled: 0
+  - enabled: 1
     path: Assets/Apps/Custom Viewer Sample/Base.unity
     guid: 2ec886a48212849d8affdb1b1aef0a2f
   - enabled: 0
     path: Assets/Apps/Custom Admin Sample/Base.unity
     guid: be49106e1fa964a5697ac5b2d021d133
-  - enabled: 1
+  - enabled: 0
     path: Assets/Apps/ConversationalAgent/ConversationalAgent.unity
     guid: fc8a1dcbce81745e4a89099ef69bbd81
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: 52d378b85fe2140b1ab71337ee988ff6, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: c082a6e06a04344d899eb5102c1f8fd3, type: 2}
+    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 8b70c7ffc90854f0b91e46b9ad608ae0, type: 2}
   m_UseUCBPForAssetBundles: 0

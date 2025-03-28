@@ -169,9 +169,6 @@ public class PortaltAPIClient : MonoBehaviour
         string url = serverConfig.GetSceneConfigUrl(config.scene_id);
         Debug.Log($"Saving scene config to: {url}");
         
-        // No need to set orgId as it's now handled by the pairing code in the URL
-        // The server will resolve the orgId from the pairing code
-        
         string jsonData = JsonConvert.SerializeObject(config);
         
         using (UnityWebRequest request = UnityWebRequest.Put(url, jsonData))

@@ -8,7 +8,7 @@ using Siccity.GLTFUtility;
 public class PortaltSceneLoader : MonoBehaviour
 {
     [Header("Server Configuration")]
-    public PortaltServerConfig serverConfig;
+    public ScriptableObject serverConfig; // Accepts both PortaltServerConfig and PortaltServerConfigV
     
     [Header("Current Scene")]
     public string currentSceneId;
@@ -58,37 +58,61 @@ public class PortaltSceneLoader : MonoBehaviour
             // Clear any existing scene
             ClearScene();
             
-            // Load configuration from API
-            string url = serverConfig.GetSceneConfigUrl(sceneId);
-            Debug.Log($"Loading scene configuration from: {url}");
+            // Load configuration from API - check if we're using a join URL
+            string url;
+            if (sceneId == "dummy" && serverConfig != null && serverConfig is PortaltServerConfigV viewerConfig)
+            {
+                // We're using the join URL approach
+                url = viewerConfig.GetActivityJoinUrl();
+                Debug.Log($"Using join URL approach: {url}");
+            }
+            else if (serverConfig is PortaltServerConfig standardConfig)
+            {
+                // Normal scene URL with scene ID
+                url = standardConfig.GetSceneConfigUrl(sceneId);
+                Debug.Log($"Loading scene configuration from normal URL: {url}");
+            }
+            else
+            {
+                Debug.LogError("No compatible server configuration found");
+                HideLoadingScreen();
+                return false;
+            }
             
             string json = await DownloadJsonFromServerAsync(url);
-            currentSceneConfig = Newtonsoft.Json.JsonConvert.DeserializeObject<SceneConfiguration>(json);
-            currentSceneId = sceneId;
-            
-            if (currentSceneConfig == null || currentSceneConfig.objects == null || currentSceneConfig.objects.Count == 0)
-            {
-                Debug.Log("Scene configuration contains no objects");
+            try {
+                currentSceneConfig = Newtonsoft.Json.JsonConvert.DeserializeObject<SceneConfiguration>(json);
+                currentSceneId = sceneId;
                 
-                // Hide loading screen
-                HideLoadingScreen();
+                if (currentSceneConfig == null || currentSceneConfig.objects == null || currentSceneConfig.objects.Count == 0)
+                {
+                    Debug.Log("Scene configuration contains no objects");
+                    
+                    // Hide loading screen
+                    HideLoadingScreen();
+                    
+                    return true;
+                }
                 
-                return true;
+                Debug.Log($"Loaded scene configuration with {currentSceneConfig.objects.Count} objects");
+                
+                // Load all objects in parallel
+                List<Task> loadingTasks = new List<Task>();
+                foreach (SceneObject obj in currentSceneConfig.objects)
+                {
+                    loadingTasks.Add(LoadModelAsync(obj));
+                }
+                
+                // Wait for all tasks to complete
+                await Task.WhenAll(loadingTasks);
+                
+                Debug.Log("Scene loading complete");
             }
-            
-            Debug.Log($"Loaded scene configuration with {currentSceneConfig.objects.Count} objects");
-            
-            // Load all objects in parallel
-            List<Task> loadingTasks = new List<Task>();
-            foreach (SceneObject obj in currentSceneConfig.objects)
+            catch (Exception e)
             {
-                loadingTasks.Add(LoadModelAsync(obj));
+                Debug.LogError($"Error parsing scene configuration: {e.Message}");
+                throw;
             }
-            
-            // Wait for all tasks to complete
-            await Task.WhenAll(loadingTasks);
-            
-            Debug.Log("Scene loading complete");
             
             // Hide loading screen
             HideLoadingScreen();
@@ -125,8 +149,18 @@ public class PortaltSceneLoader : MonoBehaviour
                 LoadingScreenManager.Instance.ShowLoadingScreen("Loading activity...");
             }
             
-            string url = serverConfig.GetActivityUrl(activityId);
-            Debug.Log($"Loading activity from: {url}");
+            string url;
+            if (serverConfig is PortaltServerConfig standardConfig)
+            {
+                url = standardConfig.GetActivityUrl(activityId);
+                Debug.Log($"Loading activity from: {url}");
+            }
+            else
+            {
+                Debug.LogError("Cannot load activity: No compatible server configuration found");
+                HideLoadingScreen();
+                return false;
+            }
             
             string json = await DownloadJsonFromServerAsync(url);
             ActivityData activity = Newtonsoft.Json.JsonConvert.DeserializeObject<ActivityData>(json);
@@ -177,7 +211,6 @@ public class PortaltSceneLoader : MonoBehaviour
     
     /// <summary>
     /// Load a scene by activity ID and scene ID
-    /// This method is used by ViewerIntegrationManager
     /// </summary>
     public async Task<bool> LoadScene(string activityId, string sceneId)
     {
