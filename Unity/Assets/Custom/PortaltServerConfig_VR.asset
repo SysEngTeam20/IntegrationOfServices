@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0fcb45673b8f64828b432e5ecdea2d9f, type: 3}
   m_Name: PortaltServerConfig_VR
   m_EditorClassIdentifier: 
-  serverIp: localhost
-  serverPort: 3000
-  pairingCode: W6AKFX
+  serverIp: 12312.232....
+  serverPort: 30053
+  pairingCode: \

@@ -22,6 +22,11 @@ public class VRViewerManager : MonoBehaviour
     [Header("Load Automatically")]
     public bool loadOnStart = true;
     
+    [Header("Joincode Settings")]
+    [Tooltip("Whether to require a joincode before loading content")]
+    public bool requireJoincode = true;
+    public JoincodeInputManager joincodeManager;
+    
     // Component references
     private PortaltAPIClient apiClient;
     private PortaltSceneLoader sceneLoader;
@@ -40,8 +45,13 @@ public class VRViewerManager : MonoBehaviour
         // Initialize components
         SetupComponents();
         
-        // Auto-load the content
-        if (loadOnStart)
+        // Check if we need a joincode first
+        if (requireJoincode && string.IsNullOrEmpty(serverConfig.pairingCode))
+        {
+            ShowJoincodeUI();
+        }
+        // Auto-load the content if not requiring joincode or already have one
+        else if (loadOnStart)
         {
             StartCoroutine(LoadActivityWithDelay());
         }
@@ -80,6 +90,12 @@ public class VRViewerManager : MonoBehaviour
             DontDestroyOnLoad(loaderObj);
         }
         
+        // Find joincode manager if not set
+        if (joincodeManager == null)
+        {
+            joincodeManager = FindObjectOfType<JoincodeInputManager>();
+        }
+        
         // Ensure components have the server config
         if (serverConfig != null)
         {
@@ -91,6 +107,21 @@ public class VRViewerManager : MonoBehaviour
         else
         {
             Debug.LogError("No server config assigned! Please create and assign a PortaltServerConfig asset.");
+        }
+    }
+    
+    /// <summary>
+    /// Shows the joincode input UI
+    /// </summary>
+    private void ShowJoincodeUI()
+    {
+        if (joincodeManager != null)
+        {
+            joincodeManager.ShowJoincodeUI();
+        }
+        else
+        {
+            Debug.LogError("No joincode manager found!");
         }
     }
     
