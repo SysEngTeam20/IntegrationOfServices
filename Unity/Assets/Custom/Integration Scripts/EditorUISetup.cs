@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections;
+using System.Collections.Generic;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -28,6 +30,17 @@ public class EditorUISetup : MonoBehaviour
     public TMP_Dropdown sceneSelector;
     public Button saveSceneButton;
     public TMP_Dropdown activitySelector;
+    
+    // Config UI References
+    [Header("Config UI References")]
+    public TMP_InputField serverIpInput;
+    public TMP_InputField serverPortInput;
+    public TMP_InputField pairingCodeInput;
+    public Button saveConfigButton;
+    public Button toggleConfigButton;
+    public GameObject configPanel;
+    
+    private bool configPanelVisible = false;
     
     #if UNITY_EDITOR
     [ContextMenu("Create Editor UI")]
@@ -103,7 +116,7 @@ public class EditorUISetup : MonoBehaviour
         // Configure scene selector
         RectTransform dropdownRect = sceneSelector.GetComponent<RectTransform>();
         dropdownRect.anchorMin = new Vector2(0.4f, 0.5f);
-        dropdownRect.anchorMax = new Vector2(0.8f, 0.9f);
+        dropdownRect.anchorMax = new Vector2(0.7f, 0.9f);
         dropdownRect.anchoredPosition = new Vector2(5, 0);
         dropdownRect.sizeDelta = new Vector2(-10, 0);
         
@@ -119,8 +132,8 @@ public class EditorUISetup : MonoBehaviour
         
         // Configure save button
         RectTransform saveButtonRect = saveSceneButton.GetComponent<RectTransform>();
-        saveButtonRect.anchorMin = new Vector2(0.8f, 0.5f);
-        saveButtonRect.anchorMax = new Vector2(1, 0.9f);
+        saveButtonRect.anchorMin = new Vector2(0.7f, 0.5f);
+        saveButtonRect.anchorMax = new Vector2(0.85f, 0.9f);
         saveButtonRect.anchoredPosition = new Vector2(-5, 0);
         saveButtonRect.sizeDelta = new Vector2(-10, 0);
         
@@ -129,6 +142,29 @@ public class EditorUISetup : MonoBehaviour
         {
             buttonText.text = "Save";
         }
+        
+        // Create config toggle button
+        GameObject configToggleObj = Instantiate(buttonPrefab.gameObject, panel.transform);
+        configToggleObj.name = "ToggleConfigButton";
+        toggleConfigButton = configToggleObj.GetComponent<Button>();
+        
+        // Configure config toggle button
+        RectTransform configToggleRect = toggleConfigButton.GetComponent<RectTransform>();
+        configToggleRect.anchorMin = new Vector2(0.85f, 0.5f);
+        configToggleRect.anchorMax = new Vector2(1f, 0.9f);
+        configToggleRect.anchoredPosition = new Vector2(-5, 0);
+        configToggleRect.sizeDelta = new Vector2(-10, 0);
+        
+        TextMeshProUGUI configButtonText = toggleConfigButton.GetComponentInChildren<TextMeshProUGUI>();
+        if (configButtonText != null)
+        {
+            configButtonText.text = "Config";
+        }
+        
+        // In Editor, we don't need to connect the listener here
+        // Leave this for Start() method to handle at runtime
+        // Just log that we created the button
+        Debug.Log("Created config toggle button - listener will be connected at runtime");
         
         // Create status label
         GameObject statusLabel = new GameObject("StatusLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -159,6 +195,9 @@ public class EditorUISetup : MonoBehaviour
         modeText.fontSize = 12;
         modeText.color = Color.yellow;
         
+        // Create configuration panel
+        CreateConfigPanel();
+        
         // Connect UI to integration manager
         if (integrationManager != null)
         {
@@ -175,6 +214,212 @@ public class EditorUISetup : MonoBehaviour
         DontDestroyOnLoad(canvasObj);
         
         Debug.Log("Editor UI created successfully with proper scaling");
+    }
+    
+    private void CreateConfigPanel()
+    {
+        // Destroy any existing config panel
+        if (configPanel != null)
+        {
+            DestroyImmediate(configPanel);
+            configPanel = null;
+        }
+
+        // Create a panel for server configuration
+        GameObject configPanelObj = new GameObject("ConfigPanel");
+        configPanelObj.transform.SetParent(mainCanvas.transform, false);
+        
+        // Add Image component for visual
+        Image configPanelImage = configPanelObj.AddComponent<Image>();
+        configPanelImage.color = new Color(0.15f, 0.15f, 0.15f, 0.9f);
+        
+        // Configure the panel's RectTransform
+        RectTransform configPanelRect = configPanelObj.GetComponent<RectTransform>();
+        configPanelRect.anchorMin = new Vector2(0.5f, 0.5f);
+        configPanelRect.anchorMax = new Vector2(0.5f, 0.5f);
+        configPanelRect.pivot = new Vector2(0.5f, 0.5f);
+        configPanelRect.sizeDelta = new Vector2(400, 250);
+        configPanelRect.anchoredPosition = Vector2.zero;
+        
+        configPanel = configPanelObj;
+        Debug.Log($"Created config panel: {configPanel.name}");
+        
+        // Create title
+        GameObject titleObj = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
+        titleObj.transform.SetParent(configPanelObj.transform, false);
+        RectTransform titleRect = titleObj.GetComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0, 1);
+        titleRect.anchorMax = new Vector2(1, 1);
+        titleRect.pivot = new Vector2(0.5f, 1);
+        titleRect.sizeDelta = new Vector2(0, 40);
+        titleRect.anchoredPosition = new Vector2(0, 0);
+        
+        TextMeshProUGUI titleText = titleObj.GetComponent<TextMeshProUGUI>();
+        titleText.text = "Server Configuration";
+        titleText.alignment = TextAlignmentOptions.Center;
+        titleText.fontSize = 18;
+        titleText.fontStyle = FontStyles.Bold;
+        
+        // Create Server IP Input
+        CreateConfigInput("ServerIP", "Server IP:", 0, out serverIpInput);
+        
+        // Create Server Port Input
+        CreateConfigInput("ServerPort", "Server Port:", 1, out serverPortInput);
+        
+        // Create Pairing Code Input
+        CreateConfigInput("PairingCode", "Pairing Code:", 2, out pairingCodeInput);
+        
+        // Create Save Config Button
+        GameObject saveConfigObj = Instantiate(buttonPrefab.gameObject, configPanelObj.transform);
+        saveConfigObj.name = "SaveConfigButton";
+        saveConfigButton = saveConfigObj.GetComponent<Button>();
+        
+        RectTransform saveConfigRect = saveConfigButton.GetComponent<RectTransform>();
+        saveConfigRect.anchorMin = new Vector2(0.5f, 0);
+        saveConfigRect.anchorMax = new Vector2(0.5f, 0);
+        saveConfigRect.pivot = new Vector2(0.5f, 0);
+        saveConfigRect.sizeDelta = new Vector2(150, 40);
+        saveConfigRect.anchoredPosition = new Vector2(0, 20);
+        
+        TextMeshProUGUI saveConfigText = saveConfigButton.GetComponentInChildren<TextMeshProUGUI>();
+        if (saveConfigText != null)
+        {
+            saveConfigText.text = "Save & Apply";
+        }
+        
+        // Add onClick listener for save button
+        saveConfigButton.onClick.RemoveAllListeners();
+        #if UNITY_EDITOR
+        saveConfigButton.onClick.AddListener(() => {
+            SaveConfiguration();
+        });
+        #else
+        saveConfigButton.onClick.AddListener(() => {
+            SaveConfigurationRuntime();
+        });
+        #endif
+        Debug.Log("Added save button listener");
+        
+        // Load current values
+        if (serverConfig != null)
+        {
+            serverIpInput.text = serverConfig.serverIp;
+            serverPortInput.text = serverConfig.serverPort.ToString();
+            pairingCodeInput.text = serverConfig.pairingCode;
+            Debug.Log("Loaded initial values from server config");
+        }
+        else
+        {
+            Debug.LogError("ServerConfig is null when creating config panel!");
+        }
+        
+        // Hide panel by default
+        configPanel.SetActive(false);
+        configPanelVisible = false;
+    }
+    
+    private void CreateConfigInput(string name, string label, int position, out TMP_InputField inputField)
+    {
+        // Create container
+        GameObject container = new GameObject(name + "Container", typeof(RectTransform));
+        container.transform.SetParent(configPanel.transform, false);
+        
+        RectTransform containerRect = container.GetComponent<RectTransform>();
+        containerRect.anchorMin = new Vector2(0, 1);
+        containerRect.anchorMax = new Vector2(1, 1);
+        containerRect.pivot = new Vector2(0.5f, 1);
+        containerRect.sizeDelta = new Vector2(0, 50);
+        containerRect.anchoredPosition = new Vector2(0, -50 - (position * 50));
+        
+        // Create label
+        GameObject labelObj = new GameObject(name + "Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+        labelObj.transform.SetParent(container.transform, false);
+        
+        RectTransform labelRect = labelObj.GetComponent<RectTransform>();
+        labelRect.anchorMin = new Vector2(0, 0.5f);
+        labelRect.anchorMax = new Vector2(0.3f, 0.5f);
+        labelRect.pivot = new Vector2(0, 0.5f);
+        labelRect.sizeDelta = new Vector2(0, 30);
+        labelRect.anchoredPosition = new Vector2(10, 0);
+        
+        TextMeshProUGUI labelText = labelObj.GetComponent<TextMeshProUGUI>();
+        labelText.text = label;
+        labelText.alignment = TextAlignmentOptions.Left;
+        labelText.fontSize = 14;
+        
+        // Create input field
+        GameObject inputObj = Instantiate(inputFieldPrefab.gameObject, container.transform);
+        inputObj.name = name + "Input";
+        inputField = inputObj.GetComponent<TMP_InputField>();
+        
+        RectTransform inputRect = inputField.GetComponent<RectTransform>();
+        inputRect.anchorMin = new Vector2(0.3f, 0.5f);
+        inputRect.anchorMax = new Vector2(1f, 0.5f);
+        inputRect.pivot = new Vector2(0.5f, 0.5f);
+        inputRect.sizeDelta = new Vector2(-20, 30);
+        inputRect.anchoredPosition = new Vector2(0, 0);
+    }
+    
+    public void ToggleConfigPanel()
+    {
+        Debug.Log("Config panel toggle button clicked");
+        
+        // If panel is visible, hide it
+        if (configPanelVisible && configPanel != null)
+        {
+            configPanel.SetActive(false);
+            configPanelVisible = false;
+            Debug.Log("Config panel hidden");
+        }
+        // If panel is not visible, show it using our comprehensive method
+        else
+        {
+            ShowConfigurationPanel();
+        }
+    }
+    
+    public void SaveConfiguration()
+    {
+        Debug.Log("Attempting to save configuration");
+        
+        if (serverConfig == null)
+        {
+            Debug.LogError("No server config reference assigned!");
+            return;
+        }
+        
+        // Update the config
+        serverConfig.serverIp = serverIpInput.text;
+        Debug.Log($"Set server IP to: {serverIpInput.text}");
+        
+        // Try to parse port
+        if (int.TryParse(serverPortInput.text, out int port))
+        {
+            serverConfig.serverPort = port;
+            Debug.Log($"Set server port to: {port}");
+        }
+        else
+        {
+            Debug.LogError("Invalid port number!");
+        }
+        
+        serverConfig.pairingCode = pairingCodeInput.text;
+        Debug.Log($"Set pairing code to: {pairingCodeInput.text}");
+        
+        // Save changes to asset
+        #if UNITY_EDITOR
+        EditorUtility.SetDirty(serverConfig);
+        AssetDatabase.SaveAssets();
+        #endif
+        
+        Debug.Log("Server configuration saved and applied!");
+        
+        // Hide panel
+        configPanel.SetActive(false);
+        configPanelVisible = false;
+        
+        // Refresh activities list from new server config
+        RefreshActivitiesList();
     }
     
     [ContextMenu("Create Full Integration Setup")]
@@ -386,5 +631,913 @@ public class EditorUISetup : MonoBehaviour
             integrationManager.saveSceneButton = saveSceneButton;
             integrationManager.activitySelector = activitySelector;
         }
+    }
+    
+    // Runtime method to save configuration changes in builds
+    public void SaveConfigurationRuntime()
+    {
+        Debug.Log("Saving configuration at runtime");
+        
+        if (serverConfig == null)
+        {
+            Debug.LogError("No server config reference assigned!");
+            return;
+        }
+        
+        if (serverIpInput == null || serverPortInput == null || pairingCodeInput == null)
+        {
+            Debug.LogError("Input field references are missing!");
+            return;
+        }
+        
+        // Update config
+        serverConfig.serverIp = serverIpInput.text;
+        Debug.Log($"Set server IP to: {serverIpInput.text}");
+        
+        if (int.TryParse(serverPortInput.text, out int port))
+        {
+            serverConfig.serverPort = port;
+            Debug.Log($"Set server port to: {port}");
+        }
+        else
+        {
+            Debug.LogError("Invalid port number!");
+        }
+        
+        serverConfig.pairingCode = pairingCodeInput.text;
+        Debug.Log($"Set pairing code to: {pairingCodeInput.text}");
+        
+        // Hide panel
+        configPanel.SetActive(false);
+        configPanelVisible = false;
+        
+        Debug.Log("Configuration saved at runtime!");
+        
+        // Refresh activities list from new server config
+        RefreshActivitiesList();
+    }
+    
+    // Helper method to refresh activities after configuration changes
+    private void RefreshActivitiesList()
+    {
+        if (integrationManager != null)
+        {
+            Debug.Log("Refreshing activities list with new server configuration");
+            
+            try
+            {
+                // First ensure all components have the updated server config
+                if (integrationManager.apiClient != null)
+                {
+                    integrationManager.apiClient.serverConfig = serverConfig;
+                    Debug.Log("Updated API client server config");
+                }
+                
+                if (integrationManager.sceneLoader != null)
+                {
+                    integrationManager.sceneLoader.serverConfig = serverConfig;
+                    Debug.Log("Updated scene loader server config");
+                }
+                
+                if (integrationManager.sceneExporter != null)
+                {
+                    integrationManager.sceneExporter.serverConfig = serverConfig;
+                    Debug.Log("Updated scene exporter server config");
+                }
+                
+                // Clear the activity dropdown to show we're refreshing
+                if (activitySelector != null)
+                {
+                    activitySelector.ClearOptions();
+                    activitySelector.options.Add(new TMP_Dropdown.OptionData("Loading..."));
+                    activitySelector.RefreshShownValue();
+                    Debug.Log("Reset activity selector dropdown to Loading state");
+                }
+                
+                // Start a coroutine to directly fetch activities from the API
+                StartCoroutine(FetchActivitiesDirectly());
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error when refreshing activities: {e.Message}");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("Integration manager is null, cannot refresh activities");
+        }
+    }
+    
+    // Update the activity dropdown with fetched activities
+    private void UpdateActivityDropdown(List<ActivityData> activities)
+    {
+        if (activitySelector != null)
+        {
+            activitySelector.ClearOptions();
+            
+            if (activities != null && activities.Count > 0)
+            {
+                Debug.Log($"Updating activity dropdown with {activities.Count} activities");
+                
+                // Add options for each activity
+                List<TMP_Dropdown.OptionData> options = new List<TMP_Dropdown.OptionData>();
+                foreach (var activity in activities)
+                {
+                    options.Add(new TMP_Dropdown.OptionData(activity.title));
+                    Debug.Log($"Added activity to dropdown: {activity.title} (ID: {activity._id})");
+                }
+                
+                activitySelector.AddOptions(options);
+                activitySelector.value = 0;
+                activitySelector.RefreshShownValue();
+                Debug.Log("Updated activity dropdown with new options");
+                
+                // Store the activities in the integration manager (this is critical)
+                var fieldInfo = integrationManager.GetType().GetField(
+                    "availableActivities", 
+                    System.Reflection.BindingFlags.Instance | 
+                    System.Reflection.BindingFlags.NonPublic | 
+                    System.Reflection.BindingFlags.Public
+                );
+                
+                if (fieldInfo != null)
+                {
+                    fieldInfo.SetValue(integrationManager, activities);
+                    Debug.Log("Updated availableActivities in the integration manager");
+                }
+                
+                // Update the integration manager's dropdown too
+                if (integrationManager != null)
+                {
+                    // Force refresh UI
+                    integrationManager.activitySelector = null;
+                    integrationManager.activitySelector = activitySelector;
+                    Debug.Log("Reassigned activity selector to integration manager");
+                    
+                    // Directly trigger the OnActivitySelected method to load the first activity
+                    var method = integrationManager.GetType().GetMethod(
+                        "OnActivitySelected",
+                        System.Reflection.BindingFlags.Instance |
+                        System.Reflection.BindingFlags.NonPublic |
+                        System.Reflection.BindingFlags.Public
+                    );
+                    
+                    if (method != null)
+                    {
+                        Debug.Log("Calling OnActivitySelected to load first activity");
+                        TriggerActivitySelection(0);
+                    }
+                    else
+                    {
+                        // Use the public method directly
+                        Debug.Log("Using LoadActivity method directly");
+                        
+                        // Clear dropdown first to ensure UI updates
+                        if (sceneSelector != null)
+                        {
+                            sceneSelector.ClearOptions();
+                            sceneSelector.options.Add(new TMP_Dropdown.OptionData("Loading scenes..."));
+                            sceneSelector.RefreshShownValue();
+                        }
+                        
+                        // Load first activity
+                        integrationManager.LoadActivity(activities[0]._id);
+                    }
+                }
+            }
+            else
+            {
+                // No activities found
+                activitySelector.options.Add(new TMP_Dropdown.OptionData("No activities found"));
+                activitySelector.RefreshShownValue();
+                
+                // Also clear scene selector
+                if (sceneSelector != null)
+                {
+                    sceneSelector.ClearOptions();
+                    sceneSelector.options.Add(new TMP_Dropdown.OptionData("No scenes available"));
+                    sceneSelector.RefreshShownValue();
+                }
+                
+                Debug.Log("No activities found on server");
+                
+                // Show message to user
+                StartCoroutine(ShowTemporaryMessage("No activities found on server"));
+            }
+        }
+        else
+        {
+            Debug.LogError("Activity selector is null, cannot update dropdown");
+        }
+    }
+    
+    // Show a temporary message to the user
+    private IEnumerator ShowTemporaryMessage(string message)
+    {
+        // Find status text component
+        TextMeshProUGUI statusText = null;
+        Transform statusLabel = mainCanvas?.transform.Find("ControlPanel/StatusLabel");
+        
+        if (statusLabel != null)
+        {
+            statusText = statusLabel.GetComponent<TextMeshProUGUI>();
+        }
+        
+        if (statusText != null)
+        {
+            // Store original message
+            string originalText = statusText.text;
+            Color originalColor = statusText.color;
+            
+            // Show warning
+            statusText.text = message;
+            statusText.color = Color.yellow;
+            
+            // Wait 3 seconds
+            yield return new WaitForSeconds(3f);
+            
+            // Restore original
+            statusText.text = originalText;
+            statusText.color = originalColor;
+        }
+    }
+    
+    // Directly fetch activities from the API and update the dropdown
+    private IEnumerator FetchActivitiesDirectly()
+    {
+        Debug.Log("Directly fetching activities from the API");
+        
+        if (activitySelector != null)
+        {
+            activitySelector.interactable = false;
+        }
+        
+        if (sceneSelector != null)
+        {
+            sceneSelector.interactable = false;
+        }
+        
+        // Clear dropdowns and show loading state
+        if (activitySelector != null)
+        {
+            activitySelector.ClearOptions();
+            activitySelector.options.Add(new TMP_Dropdown.OptionData("Loading..."));
+            activitySelector.RefreshShownValue();
+        }
+        
+        if (sceneSelector != null)
+        {
+            sceneSelector.ClearOptions();
+            sceneSelector.options.Add(new TMP_Dropdown.OptionData("Waiting..."));
+            sceneSelector.RefreshShownValue();
+        }
+        
+        // Find status text component and update it
+        TextMeshProUGUI statusText = null;
+        Transform statusLabel = mainCanvas?.transform.Find("ControlPanel/StatusLabel");
+        
+        if (statusLabel != null)
+        {
+            statusText = statusLabel.GetComponent<TextMeshProUGUI>();
+            if (statusText != null)
+            {
+                statusText.text = "Connecting to server...";
+                statusText.color = Color.yellow;
+            }
+        }
+        
+        // Use the API client directly to get activities
+        if (integrationManager?.apiClient != null)
+        {
+            // Show loading screen if available
+            if (LoadingScreenManager.Instance != null)
+            {
+                LoadingScreenManager.Instance.ShowLoadingScreen("Connecting to server...");
+            }
+            
+            Debug.Log($"Fetching activities from {serverConfig.apiBaseUrl}");
+            
+            // Use the GetActivities coroutine directly
+            yield return integrationManager.apiClient.GetActivities((activities) => {
+                Debug.Log($"Fetched {(activities != null ? activities.Count : 0)} activities from server");
+                
+                // Hide loading screen
+                if (LoadingScreenManager.Instance != null)
+                {
+                    LoadingScreenManager.Instance.HideLoadingScreen();
+                }
+                
+                // Update activity dropdown directly
+                UpdateActivityDropdown(activities);
+                
+                // Reset status text
+                if (statusText != null)
+                {
+                    statusText.text = "Portalt Scene Editor";
+                    statusText.color = Color.white;
+                }
+                
+                // Re-enable dropdowns
+                if (activitySelector != null)
+                {
+                    activitySelector.interactable = true;
+                }
+                
+                if (sceneSelector != null)
+                {
+                    sceneSelector.interactable = true;
+                }
+            });
+        }
+        else
+        {
+            Debug.LogError("API Client is null, cannot fetch activities");
+            
+            // Hide loading screen
+            if (LoadingScreenManager.Instance != null)
+            {
+                LoadingScreenManager.Instance.HideLoadingScreen();
+            }
+            
+            // Update dropdown to show error
+            if (activitySelector != null)
+            {
+                activitySelector.ClearOptions();
+                activitySelector.options.Add(new TMP_Dropdown.OptionData("Error connecting to server"));
+                activitySelector.RefreshShownValue();
+                activitySelector.interactable = true;
+            }
+            
+            if (sceneSelector != null)
+            {
+                sceneSelector.ClearOptions();
+                sceneSelector.options.Add(new TMP_Dropdown.OptionData("No scenes available"));
+                sceneSelector.RefreshShownValue();
+                sceneSelector.interactable = true;
+            }
+            
+            // Update status text
+            if (statusText != null)
+            {
+                statusText.text = "Connection failed";
+                statusText.color = Color.red;
+                
+                // Reset after a delay
+                StartCoroutine(ShowTemporaryMessage("Connection failed"));
+            }
+        }
+    }
+    
+    // This needs to be outside any #if UNITY_EDITOR blocks so it's included in builds
+    private void Start()
+    {
+        Debug.Log("EditorUISetup Start method called");
+        
+        // Make sure we have the config panel reference
+        if (configPanel == null)
+        {
+            configPanel = mainCanvas?.transform.Find("ConfigPanel")?.gameObject;
+            if (configPanel == null)
+            {
+                Debug.LogError("Could not find ConfigPanel in hierarchy!");
+            }
+            else
+            {
+                Debug.Log("Found ConfigPanel in hierarchy");
+                // Make sure it's initially hidden
+                configPanel.SetActive(false);
+                configPanelVisible = false;
+            }
+        }
+        
+        // Make sure toggle button has onClick listener
+        if (toggleConfigButton != null)
+        {
+            // Remove any existing listeners to avoid duplicates
+            toggleConfigButton.onClick.RemoveAllListeners();
+            
+            // Connect using an anonymous method to avoid direct method reference
+            // This is more reliable in builds
+            toggleConfigButton.onClick.AddListener(() => {
+                if (configPanelVisible && configPanel != null)
+                {
+                    configPanel.SetActive(false);
+                    configPanelVisible = false;
+                    Debug.Log("Config panel hidden");
+                }
+                else
+                {
+                    ShowConfigurationPanel();
+                }
+            });
+            
+            Debug.Log("Set up config toggle button onClick listener");
+        }
+        else
+        {
+            Debug.LogError("No reference to toggle config button!");
+        }
+        
+        // Make sure save button has onClick listener
+        if (saveConfigButton != null)
+        {
+            // Remove any existing listeners to avoid duplicates
+            saveConfigButton.onClick.RemoveAllListeners();
+            
+            #if UNITY_EDITOR
+            // Connect using an anonymous method instead of direct reference
+            saveConfigButton.onClick.AddListener(() => {
+                SaveConfiguration();
+            });
+            #else
+            // Connect using an anonymous method instead of direct reference
+            saveConfigButton.onClick.AddListener(() => {
+                SaveConfigurationRuntime();
+            });
+            #endif
+            
+            Debug.Log("Set up save config button onClick listener");
+        }
+        else
+        {
+            Debug.LogError("No reference to save config button!");
+        }
+    }
+    
+    // Public method that can be called from the inspector to show configuration panel
+    public void ShowConfigurationPanel()
+    {
+        Debug.Log("Manually showing configuration panel");
+        
+        // Try to find config panel if it's missing
+        if (configPanel == null)
+        {
+            // Look for it in children of mainCanvas
+            if (mainCanvas != null)
+            {
+                configPanel = mainCanvas.transform.Find("ConfigPanel")?.gameObject;
+                
+                if (configPanel == null)
+                {
+                    Debug.LogError("Could not find ConfigPanel in hierarchy - attempting to recreate it");
+                    
+                    // Try to recreate the panel
+                    #if UNITY_EDITOR
+                    // In editor, use the editor-specific method if available
+                    if (buttonPrefab != null && inputFieldPrefab != null)
+                    {
+                        CreateConfigPanel();
+                    }
+                    #else
+                    // In a build, use the runtime-compatible method
+                    CreateConfigPanelRuntime();
+                    #endif
+                    
+                    if (configPanel == null)
+                    {
+                        Debug.LogError("Failed to create config panel");
+                        return;
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogError("Main canvas is null, cannot find config panel");
+                return;
+            }
+        }
+        
+        // Make sure we have valid references for input fields
+        if (serverIpInput == null || serverPortInput == null || pairingCodeInput == null)
+        {
+            // Try to find them
+            serverIpInput = configPanel.transform.Find("ServerIPContainer/ServerIPInput")?.GetComponent<TMP_InputField>();
+            serverPortInput = configPanel.transform.Find("ServerPortContainer/ServerPortInput")?.GetComponent<TMP_InputField>();
+            pairingCodeInput = configPanel.transform.Find("PairingCodeContainer/PairingCodeInput")?.GetComponent<TMP_InputField>();
+            
+            if (serverIpInput == null || serverPortInput == null || pairingCodeInput == null)
+            {
+                Debug.LogError("Could not find all input fields in the config panel");
+                return;
+            }
+        }
+        
+        // Make sure we have a valid reference for save button
+        if (saveConfigButton == null)
+        {
+            saveConfigButton = configPanel.transform.Find("SaveConfigButton")?.GetComponent<Button>();
+            
+            if (saveConfigButton != null)
+            {
+                // Set up click handler
+                saveConfigButton.onClick.RemoveAllListeners();
+                #if UNITY_EDITOR
+                saveConfigButton.onClick.AddListener(() => {
+                    SaveConfiguration();
+                });
+                #else
+                saveConfigButton.onClick.AddListener(() => {
+                    SaveConfigurationRuntime();
+                });
+                #endif
+            }
+            else
+            {
+                Debug.LogError("Could not find save config button");
+            }
+        }
+        
+        // Update values from config
+        if (serverConfig != null)
+        {
+            serverIpInput.text = serverConfig.serverIp;
+            serverPortInput.text = serverConfig.serverPort.ToString();
+            pairingCodeInput.text = serverConfig.pairingCode;
+            Debug.Log("Updated input fields with current config values");
+        }
+        else
+        {
+            Debug.LogError("Server config is null");
+        }
+        
+        // Show the panel
+        configPanel.SetActive(true);
+        configPanelVisible = true;
+        Debug.Log("Configuration panel is now visible");
+    }
+    
+    // Public method to manually refresh activities from inspector or other scripts
+    [ContextMenu("Refresh Activities List")]
+    public void ManualRefreshActivities()
+    {
+        Debug.Log("Manual refresh of activities list requested");
+        
+        if (serverConfig == null)
+        {
+            Debug.LogError("Server config is null, cannot refresh activities");
+            return;
+        }
+        
+        RefreshActivitiesList();
+    }
+    
+    // Helper method for OnActivitySelected callback
+    private void TriggerActivitySelection(int index)
+    {
+        if (integrationManager != null && index >= 0)
+        {
+            var method = integrationManager.GetType().GetMethod(
+                "OnActivitySelected",
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Public
+            );
+            
+            if (method != null)
+            {
+                Debug.Log("Calling OnActivitySelected to load first activity");
+                method.Invoke(integrationManager, new object[] { index });
+            }
+            else if (integrationManager != null && activitySelector != null)
+            {
+                // Try to find the availableActivities field to get the ID
+                var fieldInfo = integrationManager.GetType().GetField(
+                    "availableActivities", 
+                    System.Reflection.BindingFlags.Instance | 
+                    System.Reflection.BindingFlags.NonPublic | 
+                    System.Reflection.BindingFlags.Public
+                );
+                
+                if (fieldInfo != null)
+                {
+                    var activities = fieldInfo.GetValue(integrationManager) as List<ActivityData>;
+                    if (activities != null && activities.Count > index)
+                    {
+                        // Load the activity directly
+                        Debug.Log($"Loading activity with ID: {activities[index]._id}");
+                        integrationManager.LoadActivity(activities[index]._id);
+                    }
+                }
+            }
+        }
+    }
+    
+    // Coroutine to handle refreshing with a short delay
+    private IEnumerator DelayedRefresh()
+    {
+        // Wait a short time for everything to settle
+        yield return new WaitForSeconds(0.2f);
+        
+        try
+        {
+            // Use reflection to call the private LoadActivitiesList method
+            System.Reflection.MethodInfo method = integrationManager.GetType().GetMethod(
+                "LoadActivitiesList", 
+                System.Reflection.BindingFlags.Instance | 
+                System.Reflection.BindingFlags.NonPublic | 
+                System.Reflection.BindingFlags.Public
+            );
+            
+            if (method != null)
+            {
+                Debug.Log("Calling LoadActivitiesList method");
+                method.Invoke(integrationManager, null);
+                Debug.Log("Activities refresh initiated via reflection");
+            }
+            else
+            {
+                // Fallback approach if we can't find the method
+                Debug.Log("Using fallback approach to refresh activities");
+                
+                // Clear the dropdown and force the integration manager to reload
+                if (activitySelector != null)
+                {
+                    activitySelector.ClearOptions();
+                    activitySelector.options.Add(new TMP_Dropdown.OptionData("Loading..."));
+                    activitySelector.RefreshShownValue();
+                    Debug.Log("Reset activity selector dropdown");
+                }
+                
+                // Check if the integration manager has a public method we can call
+                System.Reflection.MethodInfo publicMethod = integrationManager.GetType().GetMethod("LoadActivity");
+                if (publicMethod != null)
+                {
+                    Debug.Log("Found LoadActivity public method");
+                    // This method would likely need an activityId parameter, so we can't easily call it directly
+                }
+                
+                // Force a re-assignment of the dropdown which can trigger a refresh
+                if (integrationManager.activitySelector != null)
+                {
+                    // Store references before exiting try block
+                    var currentSelector = integrationManager.activitySelector;
+                    
+                    // Temporarily null out the selector
+                    integrationManager.activitySelector = null;
+                    
+                    // Schedule the reassignment with proper error handling
+                    StartCoroutine(ReassignSelector(currentSelector));
+                }
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Error in delayed refresh: {e.Message}");
+        }
+    }
+    
+    // Separate coroutine to handle the selector reassignment
+    private IEnumerator ReassignSelector(TMP_Dropdown selector)
+    {
+        yield return null; // Wait a frame
+        
+        try
+        {
+            if (integrationManager != null && selector != null)
+            {
+                integrationManager.activitySelector = selector;
+                Debug.Log("Reassigned activity selector to force refresh");
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Error reassigning selector: {e.Message}");
+        }
+    }
+    
+    // Runtime-compatible CreateConfigPanel method
+    private void CreateConfigPanelRuntime()
+    {
+        // Destroy any existing config panel
+        if (configPanel != null)
+        {
+            Destroy(configPanel);
+            configPanel = null;
+        }
+
+        // Create a panel for server configuration
+        GameObject configPanelObj = new GameObject("ConfigPanel");
+        configPanelObj.transform.SetParent(mainCanvas.transform, false);
+        
+        // Add Image component for visual
+        Image configPanelImage = configPanelObj.AddComponent<Image>();
+        configPanelImage.color = new Color(0.15f, 0.15f, 0.15f, 0.9f);
+        
+        // Configure the panel's RectTransform
+        RectTransform configPanelRect = configPanelObj.GetComponent<RectTransform>();
+        configPanelRect.anchorMin = new Vector2(0.5f, 0.5f);
+        configPanelRect.anchorMax = new Vector2(0.5f, 0.5f);
+        configPanelRect.pivot = new Vector2(0.5f, 0.5f);
+        configPanelRect.sizeDelta = new Vector2(400, 250);
+        configPanelRect.anchoredPosition = Vector2.zero;
+        
+        configPanel = configPanelObj;
+        Debug.Log($"Created config panel: {configPanel.name}");
+        
+        // Create title
+        GameObject titleObj = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
+        titleObj.transform.SetParent(configPanelObj.transform, false);
+        RectTransform titleRect = titleObj.GetComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0, 1);
+        titleRect.anchorMax = new Vector2(1, 1);
+        titleRect.pivot = new Vector2(0.5f, 1);
+        titleRect.sizeDelta = new Vector2(0, 40);
+        titleRect.anchoredPosition = new Vector2(0, 0);
+        
+        TextMeshProUGUI titleText = titleObj.GetComponent<TextMeshProUGUI>();
+        titleText.text = "Server Configuration";
+        titleText.alignment = TextAlignmentOptions.Center;
+        titleText.fontSize = 18;
+        titleText.fontStyle = FontStyles.Bold;
+        
+        // Create Server IP Input
+        CreateConfigInputRuntime("ServerIP", "Server IP:", 0, out serverIpInput);
+        
+        // Create Server Port Input
+        CreateConfigInputRuntime("ServerPort", "Server Port:", 1, out serverPortInput);
+        
+        // Create Pairing Code Input
+        CreateConfigInputRuntime("PairingCode", "Pairing Code:", 2, out pairingCodeInput);
+        
+        // Create Save Config Button
+        GameObject saveConfigObj = new GameObject("SaveConfigButton");
+        saveConfigObj.AddComponent<RectTransform>();
+        saveConfigObj.transform.SetParent(configPanelObj.transform, false);
+        
+        // Try to use the button prefab if available
+        if (buttonPrefab != null)
+        {
+            // Destroy the GameObject we just created
+            Destroy(saveConfigObj);
+            
+            // Instantiate the prefab instead
+            saveConfigObj = Instantiate(buttonPrefab.gameObject, configPanelObj.transform);
+        }
+        else
+        {
+            // Add required components for a basic button
+            Image saveConfigImage = saveConfigObj.AddComponent<Image>();
+            saveConfigImage.color = new Color(0.2f, 0.6f, 0.2f, 1.0f); // Green button
+            saveConfigButton = saveConfigObj.AddComponent<Button>();
+            saveConfigButton.targetGraphic = saveConfigImage;
+            
+            // Add text
+            GameObject textObj = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
+            textObj.transform.SetParent(saveConfigObj.transform, false);
+            RectTransform textRect = textObj.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+            
+            TextMeshProUGUI buttonText = textObj.GetComponent<TextMeshProUGUI>();
+            buttonText.text = "Save & Apply";
+            buttonText.alignment = TextAlignmentOptions.Center;
+            buttonText.fontSize = 14;
+        }
+        
+        saveConfigObj.name = "SaveConfigButton";
+        saveConfigButton = saveConfigObj.GetComponent<Button>();
+        
+        RectTransform saveConfigRect = saveConfigObj.GetComponent<RectTransform>();
+        saveConfigRect.anchorMin = new Vector2(0.5f, 0);
+        saveConfigRect.anchorMax = new Vector2(0.5f, 0);
+        saveConfigRect.pivot = new Vector2(0.5f, 0);
+        saveConfigRect.sizeDelta = new Vector2(150, 40);
+        saveConfigRect.anchoredPosition = new Vector2(0, 20);
+        
+        TextMeshProUGUI saveConfigText = saveConfigObj.GetComponentInChildren<TextMeshProUGUI>();
+        if (saveConfigText != null)
+        {
+            saveConfigText.text = "Save & Apply";
+        }
+        
+        // Add onClick listener for save button
+        saveConfigButton.onClick.RemoveAllListeners();
+        saveConfigButton.onClick.AddListener(() => {
+            SaveConfigurationRuntime();
+        });
+        Debug.Log("Added save button listener");
+        
+        // Load current values
+        if (serverConfig != null)
+        {
+            serverIpInput.text = serverConfig.serverIp;
+            serverPortInput.text = serverConfig.serverPort.ToString();
+            pairingCodeInput.text = serverConfig.pairingCode;
+            Debug.Log("Loaded initial values from server config");
+        }
+        else
+        {
+            Debug.LogError("ServerConfig is null when creating config panel!");
+        }
+        
+        // Hide panel by default
+        configPanel.SetActive(false);
+        configPanelVisible = false;
+    }
+    
+    // Runtime-compatible version of CreateConfigInput
+    private void CreateConfigInputRuntime(string name, string label, int position, out TMP_InputField inputField)
+    {
+        // Create container
+        GameObject container = new GameObject(name + "Container", typeof(RectTransform));
+        container.transform.SetParent(configPanel.transform, false);
+        
+        RectTransform containerRect = container.GetComponent<RectTransform>();
+        containerRect.anchorMin = new Vector2(0, 1);
+        containerRect.anchorMax = new Vector2(1, 1);
+        containerRect.pivot = new Vector2(0.5f, 1);
+        containerRect.sizeDelta = new Vector2(0, 50);
+        containerRect.anchoredPosition = new Vector2(0, -50 - (position * 50));
+        
+        // Create label
+        GameObject labelObj = new GameObject(name + "Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+        labelObj.transform.SetParent(container.transform, false);
+        
+        RectTransform labelRect = labelObj.GetComponent<RectTransform>();
+        labelRect.anchorMin = new Vector2(0, 0.5f);
+        labelRect.anchorMax = new Vector2(0.3f, 0.5f);
+        labelRect.pivot = new Vector2(0, 0.5f);
+        labelRect.sizeDelta = new Vector2(0, 30);
+        labelRect.anchoredPosition = new Vector2(10, 0);
+        
+        TextMeshProUGUI labelText = labelObj.GetComponent<TextMeshProUGUI>();
+        labelText.text = label;
+        labelText.alignment = TextAlignmentOptions.Left;
+        labelText.fontSize = 14;
+        
+        // Create input field - the tricky part
+        GameObject inputObj = null;
+        
+        if (inputFieldPrefab != null)
+        {
+            // If we have a prefab, use it
+            inputObj = Instantiate(inputFieldPrefab.gameObject, container.transform);
+        }
+        else
+        {
+            // Otherwise create a basic input field from scratch
+            inputObj = new GameObject(name + "Input", typeof(RectTransform));
+            inputObj.transform.SetParent(container.transform, false);
+            
+            // Add required components
+            Image backgroundImage = inputObj.AddComponent<Image>();
+            backgroundImage.color = new Color(0.9f, 0.9f, 0.9f, 1.0f);
+            
+            // Create text area
+            GameObject textArea = new GameObject("TextArea", typeof(RectTransform));
+            textArea.transform.SetParent(inputObj.transform, false);
+            RectTransform textAreaRect = textArea.GetComponent<RectTransform>();
+            textAreaRect.anchorMin = Vector2.zero;
+            textAreaRect.anchorMax = Vector2.one;
+            textAreaRect.offsetMin = new Vector2(5, 2);
+            textAreaRect.offsetMax = new Vector2(-5, -2);
+            
+            // Create text component for input
+            GameObject textComponent = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
+            textComponent.transform.SetParent(textArea.transform, false);
+            RectTransform textRect = textComponent.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+            
+            TextMeshProUGUI text = textComponent.GetComponent<TextMeshProUGUI>();
+            text.color = Color.black;
+            text.fontSize = 14;
+            text.alignment = TextAlignmentOptions.Left;
+            
+            // Create placeholder
+            GameObject placeholder = new GameObject("Placeholder", typeof(RectTransform), typeof(TextMeshProUGUI));
+            placeholder.transform.SetParent(textArea.transform, false);
+            RectTransform placeholderRect = placeholder.GetComponent<RectTransform>();
+            placeholderRect.anchorMin = Vector2.zero;
+            placeholderRect.anchorMax = Vector2.one;
+            placeholderRect.offsetMin = Vector2.zero;
+            placeholderRect.offsetMax = Vector2.zero;
+            
+            TextMeshProUGUI placeholderText = placeholder.GetComponent<TextMeshProUGUI>();
+            placeholderText.text = "Enter " + label.TrimEnd(':');
+            placeholderText.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+            placeholderText.fontSize = 14;
+            placeholderText.alignment = TextAlignmentOptions.Left;
+            
+            // Add the input field component and configure it
+            TMP_InputField inputFieldComponent = inputObj.AddComponent<TMP_InputField>();
+            inputFieldComponent.textComponent = text;
+            inputFieldComponent.placeholder = placeholderText;
+            inputFieldComponent.targetGraphic = backgroundImage;
+        }
+        
+        inputObj.name = name + "Input";
+        inputField = inputObj.GetComponent<TMP_InputField>();
+        
+        RectTransform inputRect = inputField.GetComponent<RectTransform>();
+        inputRect.anchorMin = new Vector2(0.3f, 0.5f);
+        inputRect.anchorMax = new Vector2(1f, 0.5f);
+        inputRect.pivot = new Vector2(0.5f, 0.5f);
+        inputRect.sizeDelta = new Vector2(-20, 30);
+        inputRect.anchoredPosition = new Vector2(0, 0);
     }
 } 

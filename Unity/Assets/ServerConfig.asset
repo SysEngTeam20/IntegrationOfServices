@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9258ee9d68b597d40ac401b2c1f8c3a1, type: 3}
   m_Name: ServerConfig
   m_EditorClassIdentifier: 
-  listenOnIp: 
-  listenOnPort: 
+  listenOnIp: 10.97.167.2
+  listenOnPort: 50000
   sendToIp: localhost
   sendToPort: 8009
   type: 0
