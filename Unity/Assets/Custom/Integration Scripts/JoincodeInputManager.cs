@@ -1,10 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Ubiq.Samples;
-
+using Ubiq.Rooms;
 /// <summary>
 /// Manages the joincode input UI for VR
 /// </summary>
@@ -14,6 +15,7 @@ public class JoincodeInputManager : MonoBehaviour
     public VRViewerManager vrViewerManager;
     public PortaltServerConfigV serverConfig;
     public ScriptableObject ubiqServerConfig; // Direct reference to the Ubiq ServerConfig asset
+    public RoomClient roomClient; // Reference to the Ubiq RoomClient 
     
     [Header("UI Elements")]
     public TMP_InputField joincodeInputField;
@@ -71,6 +73,20 @@ public class JoincodeInputManager : MonoBehaviour
         if (serverConfig == null && vrViewerManager != null)
         {
             serverConfig = vrViewerManager.serverConfig;
+        }
+        
+        // Find the RoomClient if not assigned
+        if (roomClient == null)
+        {
+            roomClient = FindObjectOfType<RoomClient>();
+            if (roomClient == null)
+            {
+                Debug.LogWarning("Could not find RoomClient in the scene. Ubiq room joining will not work.");
+            }
+            else
+            {
+                Debug.Log("Found RoomClient automatically: " + roomClient.name);
+            }
         }
         
         // Try to find Ubiq server config if not assigned
@@ -520,6 +536,22 @@ public class JoincodeInputManager : MonoBehaviour
         else
         {
             Debug.LogWarning("No valid configuration changes were made.");
+        }
+        
+        // Join Ubiq room with derived GUID from joinCode
+        if (roomClient != null && !string.IsNullOrEmpty(serverConfig.joinCode))
+        {
+            try
+            {
+                // Prepend zeros to make a valid GUID
+                string guidString = "00000000-0000-0000-0000-000000" + serverConfig.joinCode;
+                roomClient.Join(new Guid(guidString));
+                Debug.Log("Joined Ubiq room with GUID: " + guidString);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("Failed to join Ubiq room: " + ex.Message);
+            }
         }
     }
     
