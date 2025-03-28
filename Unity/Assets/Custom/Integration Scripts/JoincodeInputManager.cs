@@ -537,22 +537,6 @@ public class JoincodeInputManager : MonoBehaviour
         {
             Debug.LogWarning("No valid configuration changes were made.");
         }
-        
-        // Join Ubiq room with derived GUID from joinCode
-        if (roomClient != null && !string.IsNullOrEmpty(serverConfig.joinCode))
-        {
-            try
-            {
-                // Prepend zeros to make a valid GUID
-                string guidString = "00000000-0000-0000-0000-000000" + serverConfig.joinCode;
-                roomClient.Join(new Guid(guidString));
-                Debug.Log("Joined Ubiq room with GUID: " + guidString);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError("Failed to join Ubiq room: " + ex.Message);
-            }
-        }
     }
     
     private void UpdateUbiqConnection(string address)
