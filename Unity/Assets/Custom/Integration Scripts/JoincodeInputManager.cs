@@ -544,7 +544,7 @@ public class JoincodeInputManager : MonoBehaviour
             try
             {
                 // Prepend zeros to make a valid GUID
-                string guidString = "00000000-0000-0000-0000-000000" + serverConfig.joinCode;
+                string guidString = "6765c52b-3ad6-4fb0-9030-2c9a05dc4731";
                 roomClient.Join(new Guid(guidString));
                 Debug.Log("Joined Ubiq room with GUID: " + guidString);
             }
