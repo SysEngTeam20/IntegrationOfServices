@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using TMPro;
 using Ubiq.Samples;
 using Ubiq.Rooms;
+using Ubiq.Messaging;
 /// <summary>
 /// Manages the joincode input UI for VR
 /// </summary>
@@ -49,15 +50,29 @@ public class JoincodeInputManager : MonoBehaviour
     
     private void Awake()
     {
+        // First enable the UI panel if needed
         if (joincodePanel != null)
         {
             joincodePanel.SetActive(true);
         }
-    }
-    
-    private void Start()
-    {
+        
+        // Then initialize all components and clear server configs
         Initialize();
+        
+        // Clear servers to prevent auto-connection
+        if (roomClient != null)
+        {
+            // Use reflection to set servers to empty array
+            System.Type roomClientType = typeof(RoomClient);
+            System.Reflection.FieldInfo serversField = roomClientType.GetField("servers", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                
+            if (serversField != null)
+            {
+                serversField.SetValue(roomClient, new Ubiq.Networking.ConnectionDefinition[0]);
+                Debug.Log("Servers field set to empty array");
+            }
+        }
     }
     
     public void Initialize()
@@ -482,6 +497,25 @@ public class JoincodeInputManager : MonoBehaviour
             }
         }
         
+        // Set up Ubiq room connection before hiding UI
+        if (roomClient != null && ubiqServerConfig != null)
+        {
+            // Create a connection definition
+            Ubiq.Networking.ConnectionDefinition connection = ScriptableObject.CreateInstance<Ubiq.Networking.ConnectionDefinition>();
+            
+            // Set connection properties directly
+            connection.sendToIp = ubiqServerIpInputField.text;
+            connection.sendToPort = ubiqServerPortInputField.text;
+            connection.type = Ubiq.Networking.ConnectionType.TcpClient;
+            
+            // Set and connect
+            roomClient.SetDefaultServer(connection);
+            roomClient.Reconnect(false);
+            
+            // Get the scene ID and join the room - don't use a coroutine as the panel might be deactivated
+            JoinRoomWithSceneId();
+        }
+        
         if (configChanged)
         {
             // Make sure we have a reference to the VR viewer manager
@@ -530,12 +564,177 @@ public class JoincodeInputManager : MonoBehaviour
                 Debug.LogWarning("Join code is empty, not loading content");
             }
             
-            // Hide UI
+            // Hide UI after all operations that need UI are complete
             HideJoincodeUI();
         }
         else
         {
             Debug.LogWarning("No valid configuration changes were made.");
+        }
+    }
+    
+    /// <summary>
+    /// Gets the scene ID and joins the Ubiq room without using a coroutine
+    /// </summary>
+    private void JoinRoomWithSceneId()
+    {
+        if (serverConfig == null || string.IsNullOrEmpty(serverConfig.joinCode))
+        {
+            Debug.LogWarning("Cannot get scene ID: server config or join code is missing");
+            
+            // Fall back to the default GUID
+            Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4735");
+            roomClient.Join(defaultGuid);
+            return;
+        }
+        
+        // Start a coroutine on a persistent GameObject that won't be deactivated
+        GameObject persistentObject = GetPersistentGameObject();
+        MonoBehaviour runner = persistentObject.GetComponent<MonoBehaviour>();
+        
+        if (runner != null)
+        {
+            runner.StartCoroutine(GetSceneIdAndJoinRoom());
+        }
+        else
+        {
+            Debug.LogError("Failed to get a persistent MonoBehaviour to run the coroutine");
+            
+            // Fall back to the default GUID as a last resort
+            Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4735");
+            roomClient.Join(defaultGuid);
+        }
+    }
+    
+    /// <summary>
+    /// Gets or creates a persistent GameObject that won't be destroyed or deactivated
+    /// </summary>
+    private GameObject GetPersistentGameObject()
+    {
+        // First check if our VRViewerManager can be used
+        if (vrViewerManager != null)
+        {
+            return vrViewerManager.gameObject;
+        }
+        
+        // Then check for the RoomClient
+        if (roomClient != null)
+        {
+            return roomClient.gameObject;
+        }
+        
+        // Look for other suitable persistent objects
+        NetworkScene networkScene = FindObjectOfType<NetworkScene>();
+        if (networkScene != null)
+        {
+            return networkScene.gameObject;
+        }
+        
+        // If all else fails, create a new persistent object
+        GameObject persistentObject = GameObject.Find("PersistentCoroutineRunner");
+        if (persistentObject == null)
+        {
+            persistentObject = new GameObject("PersistentCoroutineRunner");
+            persistentObject.AddComponent<PersistentCoroutineRunner>();
+            DontDestroyOnLoad(persistentObject);
+        }
+        
+        return persistentObject;
+    }
+    
+    /// <summary>
+    /// A simple MonoBehaviour to run coroutines that persist even when other objects are disabled
+    /// </summary>
+    public class PersistentCoroutineRunner : MonoBehaviour
+    {
+        private void Awake()
+        {
+            DontDestroyOnLoad(gameObject);
+        }
+    }
+    
+    /// <summary>
+    /// Retrieves the scene_id from the join URL and uses it to join the Ubiq room
+    /// </summary>
+    private IEnumerator GetSceneIdAndJoinRoom()
+    {
+        if (serverConfig == null)
+        {
+            Debug.LogError("No server config available!");
+            yield break;
+        }
+        
+        if (string.IsNullOrEmpty(serverConfig.joinCode))
+        {
+            Debug.LogError("Join code is empty, cannot get scene ID!");
+            
+            // Fall back to the default GUID
+            Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4735");
+            roomClient.Join(defaultGuid);
+            yield break;
+        }
+        
+        string url = serverConfig.GetActivityJoinUrl();
+        Debug.Log($"Fetching scene ID from: {url}");
+        
+        // Make a web request to get the scene configuration
+        using (UnityEngine.Networking.UnityWebRequest request = UnityEngine.Networking.UnityWebRequest.Get(url))
+        {
+            yield return request.SendWebRequest();
+            
+            if (request.isNetworkError || request.isHttpError)
+            {
+                Debug.LogError($"Error fetching scene configuration: {request.error}");
+                
+                // Fall back to the default GUID
+                Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4735");
+                roomClient.Join(defaultGuid);
+                yield break;
+            }
+            
+            try
+            {
+                // Parse the JSON response
+                string json = request.downloadHandler.text;
+                SceneConfiguration sceneConfig = Newtonsoft.Json.JsonConvert.DeserializeObject<SceneConfiguration>(json);
+                
+                if (sceneConfig != null && !string.IsNullOrEmpty(sceneConfig.scene_id))
+                {
+                    // Use the scene_id as the room GUID
+                    string sceneId = sceneConfig.scene_id;
+                    Debug.Log($"Using scene ID as room GUID: {sceneId}");
+                    
+                    try
+                    {
+                        Guid roomGuid = Guid.Parse(sceneId);
+                        roomClient.Join(roomGuid);
+                    }
+                    catch (FormatException ex)
+                    {
+                        Debug.LogError($"Invalid scene ID format for GUID: {sceneId}. Error: {ex.Message}");
+                        
+                        // Fall back to the default GUID
+                        Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4735");
+                        roomClient.Join(defaultGuid);
+                    }
+                }
+                else
+                {
+                    Debug.LogError("No scene_id found in the response!");
+                    
+                    // Fall back to the default GUID
+                    Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4735");
+                    roomClient.Join(defaultGuid);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Error parsing scene configuration: {ex.Message}");
+                
+                // Fall back to the default GUID
+                Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4735");
+                roomClient.Join(defaultGuid);
+            }
         }
     }
     
