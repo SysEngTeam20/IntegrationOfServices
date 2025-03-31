@@ -583,7 +583,7 @@ public class JoincodeInputManager : MonoBehaviour
             Debug.LogWarning("Cannot get scene ID: server config or join code is missing");
             
             // Fall back to the default GUID
-            Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4735");
+            Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4731");
             roomClient.Join(defaultGuid);
             return;
         }
@@ -601,7 +601,7 @@ public class JoincodeInputManager : MonoBehaviour
             Debug.LogError("Failed to get a persistent MonoBehaviour to run the coroutine");
             
             // Fall back to the default GUID as a last resort
-            Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4735");
+            Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4731");
             roomClient.Join(defaultGuid);
         }
     }
@@ -669,7 +669,7 @@ public class JoincodeInputManager : MonoBehaviour
             Debug.LogError("Join code is empty, cannot get scene ID!");
             
             // Fall back to the default GUID
-            Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4735");
+            Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4731");
             roomClient.Join(defaultGuid);
             yield break;
         }
@@ -687,7 +687,7 @@ public class JoincodeInputManager : MonoBehaviour
                 Debug.LogError($"Error fetching scene configuration: {request.error}");
                 
                 // Fall back to the default GUID
-                Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4735");
+                Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4731");
                 roomClient.Join(defaultGuid);
                 yield break;
             }
@@ -714,7 +714,7 @@ public class JoincodeInputManager : MonoBehaviour
                         Debug.LogError($"Invalid scene ID format for GUID: {sceneId}. Error: {ex.Message}");
                         
                         // Fall back to the default GUID
-                        Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4735");
+                        Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4731");
                         roomClient.Join(defaultGuid);
                     }
                 }
@@ -723,7 +723,7 @@ public class JoincodeInputManager : MonoBehaviour
                     Debug.LogError("No scene_id found in the response!");
                     
                     // Fall back to the default GUID
-                    Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4735");
+                    Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4731");
                     roomClient.Join(defaultGuid);
                 }
             }
@@ -732,7 +732,7 @@ public class JoincodeInputManager : MonoBehaviour
                 Debug.LogError($"Error parsing scene configuration: {ex.Message}");
                 
                 // Fall back to the default GUID
-                Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4735");
+                Guid defaultGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4731");
                 roomClient.Join(defaultGuid);
             }
         }

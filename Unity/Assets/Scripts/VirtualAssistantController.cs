@@ -118,12 +118,6 @@ public class VirtualAssistantController : MonoBehaviour
 
             foreach(var avatar in avatarManager.Avatars)
             {
-                // Check if avatar is null or has been destroyed
-                if (avatar == null || !avatar)
-                {
-                    continue;
-                }
-                
                 var audioSource = avatar.GetComponentInChildren<AudioSource>();
                 if (!audioSource)
                 {
@@ -158,12 +152,6 @@ public class VirtualAssistantController : MonoBehaviour
         var targetAvatar = null as Ubiq.Avatars.Avatar;
         foreach(var avatar in avatarManager.Avatars)
         {
-            // Check if avatar is null or has been destroyed
-            if (avatar == null || !avatar)
-            {
-                continue;
-            }
-            
             if (avatar.Peer == targetPeer)
             {
                 targetAvatar = avatar;
@@ -171,7 +159,7 @@ public class VirtualAssistantController : MonoBehaviour
             }
         }
 
-        if (!targetAvatar || targetAvatar == null)
+        if (!targetAvatar)
         {
             return;
         }
