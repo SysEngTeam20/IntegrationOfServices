@@ -1,8 +1,8 @@
-# IntegrationOfServices Repository
+# unity-vr-scenes Repository
 
 ## Overview
 
-Welcome to the `IntegrationOfServices` project repository. This project contains the necessary assets and code for a Unity application focused on the creation, administration, and viewing of interactive 3D/VR environments.
+Welcome to the `unity-vr-scenes` project repository. This project contains the necessary assets and code for a Unity application focused on the creation, administration, and viewing of interactive 3D/VR environments.
 
 The core components allow for:
 1.  **Scene Administration:** An interface for selecting base scenes, adding/manipulating 3D models (position, rotation, scale), and saving the final configuration to a server.
@@ -30,7 +30,7 @@ The Unity project features two main scenes, each with its own dedicated document
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/SysEngTeam20/IntegrationOfServices.git](https://github.com/SysEngTeam20/IntegrationOfServices.git)
+    git clone [https://github.com/SysEngTeam20/unity-vr-scenes.git](https://github.com/SysEngTeam20/unity-vr-scenes.git)
     ```
 2.  **Ensure Prerequisites:** Install Unity Hub and the recommended Unity Editor version (6000.0.25f1 or later) with necessary modules (Android Build Support, etc.) as detailed in the scene-specific READMEs.
 3.  **Open the Unity Project:** Add and open the `/Unity` subfolder as a project in Unity Hub.
