@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 647cc01c7ee624a649f32baf7c2d8380, type: 3}
   m_Name: PortaltServerConfigV
   m_EditorClassIdentifier: 
-  serverIp: 10.97.167.2
+  serverIp: localhost
   serverPort: 3000
-  joinCode: 386PJG
+  joinCode: 594719

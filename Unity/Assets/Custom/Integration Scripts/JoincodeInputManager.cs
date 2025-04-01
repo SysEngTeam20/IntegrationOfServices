@@ -706,7 +706,7 @@ public class JoincodeInputManager : MonoBehaviour
                     
                     try
                     {
-                        Guid roomGuid = Guid.Parse(sceneId);
+                        Guid roomGuid = Guid.Parse("6765c52b-3ad6-4fb0-9030-2c9a05dc4731");
                         roomClient.Join(roomGuid);
                     }
                     catch (FormatException ex)
