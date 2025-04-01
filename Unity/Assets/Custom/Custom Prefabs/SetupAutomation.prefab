@@ -1,0 +1,264 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &6220346441675647393
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2990748299123406856}
+  - component: {fileID: 3721681413474392690}
+  m_Layer: 0
+  m_Name: PortaltIntegrationManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2990748299123406856
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6220346441675647393}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 15.882871, y: 3.3608792, z: -2.7097197}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3834457334444529730}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3721681413474392690
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6220346441675647393}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6eb6509906494237ac3038609e042d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  serverConfig: {fileID: 11400000, guid: e8dc711d46901439f8cc44d041ae5574, type: 2}
+  apiClient: {fileID: 3161938989850170638}
+  sceneLoader: {fileID: 9002586687368139022}
+  sceneExporter: {fileID: 5826399921290745182}
+  adminController: {fileID: 0}
+  activitySelector: {fileID: 0}
+  sceneSelector: {fileID: 0}
+  saveSceneButton: {fileID: 0}
+--- !u!1 &6512122043535547845
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8161727860335890287}
+  - component: {fileID: 3161938989850170638}
+  m_Layer: 0
+  m_Name: PortaltAPIClient
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8161727860335890287
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6512122043535547845}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 15.882871, y: 3.3608792, z: -2.7097197}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3834457334444529730}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3161938989850170638
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6512122043535547845}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 377f7a5627c6b4583a8c99dffebcd26b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  serverConfig: {fileID: 11400000, guid: e8dc711d46901439f8cc44d041ae5574, type: 2}
+--- !u!1 &6930097470873001011
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1927816420263022306}
+  - component: {fileID: 9002586687368139022}
+  m_Layer: 0
+  m_Name: PortaltSceneLoader
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1927816420263022306
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6930097470873001011}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 15.882871, y: 3.3608792, z: -2.7097197}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3834457334444529730}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &9002586687368139022
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6930097470873001011}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eed14d065f10c4f688b973b3d702068b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  serverConfig: {fileID: 11400000, guid: e8dc711d46901439f8cc44d041ae5574, type: 2}
+  currentSceneId: 
+  currentActivityId: 
+  colliderVisualizationMaterial: {fileID: 2100000, guid: 4cfd41591c4e74bd9a0f65ef04f8cf2b, type: 2}
+  showColliderBounds: 0
+  colliderVisualizationOpacity: 1
+  colliderHighlightColor: {r: 1, g: 0.2946399, b: 0, a: 1}
+  toggleVisualizationKey: 118
+--- !u!1 &7293133927479488176
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1606386694455484054}
+  - component: {fileID: 5826399921290745182}
+  m_Layer: 0
+  m_Name: PortaltSceneExporter
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1606386694455484054
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7293133927479488176}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 15.882871, y: 3.3608792, z: -2.7097197}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3834457334444529730}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5826399921290745182
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7293133927479488176}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23306ef5625044f158d74e6043987123, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  serverConfig: {fileID: 11400000, guid: e8dc711d46901439f8cc44d041ae5574, type: 2}
+  sceneLoader: {fileID: 9002586687368139022}
+--- !u!1 &8961961835808528858
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3834457334444529730}
+  - component: {fileID: 4317331406913030116}
+  m_Layer: 0
+  m_Name: SetupAutomation
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3834457334444529730
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8961961835808528858}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -15.882871, y: -3.3608792, z: 2.7097197}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2990748299123406856}
+  - {fileID: 8161727860335890287}
+  - {fileID: 1927816420263022306}
+  - {fileID: 1606386694455484054}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4317331406913030116
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8961961835808528858}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34e13e7249393458894595a92fae70e1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  integrationManager: {fileID: 3721681413474392690}
+  serverConfig: {fileID: 11400000, guid: e8dc711d46901439f8cc44d041ae5574, type: 2}
+  canvasPrefab: {fileID: 3867105106587528029, guid: 50841eacfe72e4318bf5cc3fce1ed849, type: 3}
+  inputFieldPrefab: {fileID: 6429030323123088713, guid: a78926885d7e14727a5832054934531c, type: 3}
+  buttonPrefab: {fileID: 8502952536943161737, guid: 9769becc87de744dc851cd66f11137d7, type: 3}
+  dropdownPrefab: {fileID: 1574104054648453230, guid: 310b0f19bbf644637ad50a520761b745, type: 3}
+  panelPrefab: {fileID: 5925711390561557840, guid: 2456d9a8d9f6045e3af5a7b131429cc0, type: 3}
+  mainCanvas: {fileID: 0}
+  activityIdInput: {fileID: 0}
+  loadActivityButton: {fileID: 0}
+  sceneSelector: {fileID: 0}
+  saveSceneButton: {fileID: 0}
+  activitySelector: {fileID: 0}
+  pairingCodeInput: {fileID: 0}
+  saveConfigButton: {fileID: 0}
+  toggleConfigButton: {fileID: 0}
+  configPanel: {fileID: 0}
+  toggleInstructionsButton: {fileID: 0}
+  instructionsPanel: {fileID: 0}
