@@ -14,12 +14,73 @@ public class PortaltSceneLoader : MonoBehaviour
     public string currentSceneId;
     public string currentActivityId;
     
+    [Header("Selection Visualization")]
+    [Tooltip("Material used to visualize colliders for selection. Create a custom material with Standard or URP/Lit shader and set Rendering Mode to Transparent.")]
+    public Material colliderVisualizationMaterial;
+    [Tooltip("Should collider bounds be shown to help user selection")]
+    public bool showColliderBounds = false;
+    [Range(0.0f, 1.0f)]
+    [Tooltip("Transparency of the collider visualization")]
+    public float colliderVisualizationOpacity = 0.3f;
+    [Tooltip("Color for highlighting colliders")]
+    public Color colliderHighlightColor = new Color(0.2f, 0.6f, 1.0f, 0.3f);
+    [Tooltip("Key to toggle collider visualization")]
+    public KeyCode toggleVisualizationKey = KeyCode.V;
+    
     // References to currently loaded objects
     private List<GameObject> loadedObjects = new List<GameObject>();
     private SceneConfiguration currentSceneConfig;
+    private List<GameObject> colliderVisualizers = new List<GameObject>();
+    private Material instancedColliderMaterial;
     
     // Public property to access current configuration
     public SceneConfiguration CurrentSceneConfig => currentSceneConfig;
+    
+    private void Awake()
+    {
+        // Check if a visualization material was provided
+        if (colliderVisualizationMaterial == null)
+        {
+            Debug.LogWarning("No collider visualization material assigned. Colliders will not be visualized correctly.");
+            
+            // Create a simple material as fallback, but it might not work in builds
+            colliderVisualizationMaterial = new Material(Shader.Find("Unlit/Color"));
+            colliderVisualizationMaterial.color = colliderHighlightColor;
+        }
+        
+        // Create an instanced copy so we can modify it without affecting the original
+        instancedColliderMaterial = new Material(colliderVisualizationMaterial);
+        instancedColliderMaterial.color = colliderHighlightColor;
+    }
+    
+    private void OnValidate()
+    {
+        // Update the instance material in the editor when properties change
+        if (instancedColliderMaterial != null)
+        {
+            Color newColor = colliderHighlightColor;
+            newColor.a = colliderVisualizationOpacity;
+            instancedColliderMaterial.color = newColor;
+        }
+    }
+    
+    private void Update()
+    {
+        // Update material opacity if it changed
+        if (instancedColliderMaterial.color.a != colliderVisualizationOpacity)
+        {
+            Color newColor = colliderHighlightColor;
+            newColor.a = colliderVisualizationOpacity;
+            instancedColliderMaterial.color = newColor;
+        }
+        
+        // Check for key press to toggle collider visualization
+        if (Input.GetKeyDown(toggleVisualizationKey))
+        {
+            ToggleColliderVisualization();
+            Debug.Log($"Collider visualization {(showColliderBounds ? "enabled" : "disabled")} via key press");
+        }
+    }
     
     // Show loading screen with appropriate scene message
     private void ShowLoadingScreen(string sceneId)
@@ -40,6 +101,195 @@ public class PortaltSceneLoader : MonoBehaviour
     }
     
     /// <summary>
+    /// Toggle the visualization of colliders on all loaded objects
+    /// </summary>
+    public void ToggleColliderVisualization()
+    {
+        showColliderBounds = !showColliderBounds;
+        
+        if (showColliderBounds)
+        {
+            CreateColliderVisualizers();
+        }
+        else
+        {
+            DestroyColliderVisualizers();
+        }
+    }
+    
+    /// <summary>
+    /// Create visualizers for all colliders in the scene
+    /// </summary>
+    private void CreateColliderVisualizers()
+    {
+        DestroyColliderVisualizers();
+        
+        if (colliderVisualizationMaterial == null)
+        {
+            Debug.LogWarning("Collider visualization material is not assigned. Creating a default material.");
+            colliderVisualizationMaterial = new Material(Shader.Find("Standard"));
+            colliderVisualizationMaterial.color = colliderHighlightColor;
+        }
+        
+        foreach (GameObject obj in loadedObjects)
+        {
+            if (obj == null) continue;
+            
+            Collider[] colliders = obj.GetComponentsInChildren<Collider>();
+            
+            foreach (Collider collider in colliders)
+            {
+                if (collider == null) continue;
+                
+                GameObject visualizer = CreateColliderVisualizer(collider);
+                if (visualizer != null)
+                {
+                    colliderVisualizers.Add(visualizer);
+                }
+            }
+        }
+        
+        Debug.Log($"Created {colliderVisualizers.Count} collider visualizers");
+    }
+    
+    /// <summary>
+    /// Create a visualizer for a specific collider
+    /// </summary>
+    private GameObject CreateColliderVisualizer(Collider collider)
+    {
+        GameObject visualizer = null;
+        
+        // Create different visualizers based on collider type
+        if (collider is BoxCollider boxCollider)
+        {
+            visualizer = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            
+            // Set parent first so transform calculations are correct
+            visualizer.transform.SetParent(boxCollider.transform, false);
+            
+            // Position at the collider's local center
+            visualizer.transform.localPosition = boxCollider.center;
+            visualizer.transform.localRotation = Quaternion.identity;
+            visualizer.transform.localScale = boxCollider.size;
+        }
+        else if (collider is SphereCollider sphereCollider)
+        {
+            visualizer = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            
+            // Set parent first so transform calculations are correct
+            visualizer.transform.SetParent(sphereCollider.transform, false);
+            
+            // Position at the collider's local center
+            visualizer.transform.localPosition = sphereCollider.center;
+            visualizer.transform.localRotation = Quaternion.identity;
+            
+            // Scale to match the collider's radius
+            float diameter = sphereCollider.radius * 2f;
+            visualizer.transform.localScale = new Vector3(diameter, diameter, diameter);
+        }
+        else if (collider is CapsuleCollider capsuleCollider)
+        {
+            visualizer = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            
+            // Set parent first so transform calculations are correct
+            visualizer.transform.SetParent(capsuleCollider.transform, false);
+            
+            // Position at the collider's local center
+            visualizer.transform.localPosition = capsuleCollider.center;
+            
+            // Rotate based on capsule direction
+            if (capsuleCollider.direction == 0) // X axis
+            {
+                visualizer.transform.localRotation = Quaternion.Euler(0, 0, 90);
+            }
+            else if (capsuleCollider.direction == 2) // Z axis
+            {
+                visualizer.transform.localRotation = Quaternion.Euler(90, 0, 0);
+            }
+            else // Y axis (default)
+            {
+                visualizer.transform.localRotation = Quaternion.identity;
+            }
+            
+            // Scale to match the collider's dimensions
+            float diameter = capsuleCollider.radius * 2f;
+            
+            // Capsule primitive's height includes the hemispherical ends, so we need to adjust
+            float adjustedHeight = capsuleCollider.height;
+            
+            if (capsuleCollider.direction == 0) // X axis
+            {
+                visualizer.transform.localScale = new Vector3(adjustedHeight, diameter, diameter);
+            }
+            else if (capsuleCollider.direction == 1) // Y axis
+            {
+                visualizer.transform.localScale = new Vector3(diameter, adjustedHeight, diameter);
+            }
+            else // Z axis
+            {
+                visualizer.transform.localScale = new Vector3(diameter, diameter, adjustedHeight);
+            }
+        }
+        else if (collider is MeshCollider meshCollider && meshCollider.sharedMesh != null)
+        {
+            visualizer = new GameObject("MeshColliderVisualizer");
+            
+            // Set parent first so transform calculations are correct
+            visualizer.transform.SetParent(meshCollider.transform, false);
+            visualizer.transform.localPosition = Vector3.zero;
+            visualizer.transform.localRotation = Quaternion.identity;
+            visualizer.transform.localScale = Vector3.one;
+            
+            MeshFilter meshFilter = visualizer.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = meshCollider.sharedMesh;
+            
+            MeshRenderer meshRenderer = visualizer.AddComponent<MeshRenderer>();
+        }
+        
+        if (visualizer != null)
+        {
+            // Configure the visualizer
+            visualizer.name = "ColliderVisualizer_" + collider.gameObject.name;
+            
+            // Configure the renderer
+            Renderer renderer = visualizer.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                // Use a copy of the properly configured material
+                renderer.material = new Material(instancedColliderMaterial);
+            }
+            
+            // Disable collision on the visualizer
+            Collider visualizerCollider = visualizer.GetComponent<Collider>();
+            if (visualizerCollider != null)
+            {
+                Destroy(visualizerCollider);
+            }
+            
+            // Set layer to something that won't be interactive
+            visualizer.layer = LayerMask.NameToLayer("Ignore Raycast") != -1 ? 
+                LayerMask.NameToLayer("Ignore Raycast") : 2; // 2 is the default "Ignore Raycast" layer
+        }
+        
+        return visualizer;
+    }
+    
+    /// <summary>
+    /// Destroy all collider visualizers
+    /// </summary>
+    private void DestroyColliderVisualizers()
+    {
+        foreach (GameObject viz in colliderVisualizers)
+        {
+            if (viz != null)
+            {
+                Destroy(viz);
+            }
+        }
+        colliderVisualizers.Clear();
+    }
+    
+    /// <summary>
     /// Load a scene by ID directly from the Portalt API
     /// </summary>
     public async Task<bool> LoadSceneFromApi(string sceneId)
@@ -52,23 +302,17 @@ public class PortaltSceneLoader : MonoBehaviour
         
         try
         {
-            // Show loading screen
             ShowLoadingScreen(sceneId);
-            
-            // Clear any existing scene
             ClearScene();
             
-            // Load configuration from API - check if we're using a join URL
             string url;
             if (sceneId == "dummy" && serverConfig != null && serverConfig is PortaltServerConfigV viewerConfig)
             {
-                // We're using the join URL approach
                 url = viewerConfig.GetActivityJoinUrl();
                 Debug.Log($"Using join URL approach: {url}");
             }
             else if (serverConfig is PortaltServerConfig standardConfig)
             {
-                // Normal scene URL with scene ID
                 url = standardConfig.GetSceneConfigUrl(sceneId);
                 Debug.Log($"Loading scene configuration from normal URL: {url}");
             }
@@ -87,24 +331,24 @@ public class PortaltSceneLoader : MonoBehaviour
                 if (currentSceneConfig == null || currentSceneConfig.objects == null || currentSceneConfig.objects.Count == 0)
                 {
                     Debug.Log("Scene configuration contains no objects");
-                    
-                    // Hide loading screen
                     HideLoadingScreen();
-                    
                     return true;
                 }
                 
                 Debug.Log($"Loaded scene configuration with {currentSceneConfig.objects.Count} objects");
                 
-                // Load all objects in parallel
                 List<Task> loadingTasks = new List<Task>();
                 foreach (SceneObject obj in currentSceneConfig.objects)
                 {
                     loadingTasks.Add(LoadModelAsync(obj));
                 }
                 
-                // Wait for all tasks to complete
                 await Task.WhenAll(loadingTasks);
+                
+                if (showColliderBounds)
+                {
+                    CreateColliderVisualizers();
+                }
                 
                 Debug.Log("Scene loading complete");
             }
@@ -114,18 +358,13 @@ public class PortaltSceneLoader : MonoBehaviour
                 throw;
             }
             
-            // Hide loading screen
             HideLoadingScreen();
-            
             return true;
         }
         catch (Exception e)
         {
             Debug.LogError($"Failed to load scene: {e.Message}");
-            
-            // Hide loading screen
             HideLoadingScreen();
-            
             return false;
         }
     }
@@ -197,6 +436,7 @@ public class PortaltSceneLoader : MonoBehaviour
     /// </summary>
     public void ClearScene()
     {
+        // Destroy all loaded objects
         foreach (GameObject obj in loadedObjects)
         {
             if (obj != null)
@@ -204,8 +444,11 @@ public class PortaltSceneLoader : MonoBehaviour
                 Destroy(obj);
             }
         }
-        
         loadedObjects.Clear();
+        
+        // Destroy all collider visualizers
+        DestroyColliderVisualizers();
+        
         Debug.Log("Scene cleared");
     }
     
@@ -284,54 +527,126 @@ public class PortaltSceneLoader : MonoBehaviour
         model.transform.localScale = objData.scale.ToVector3();
         model.name = objData.object_id;
         
-        // Make sure the object is on the correct layer for selection
+        // Set layer for selection
         model.layer = LayerMask.NameToLayer("Selectable") != -1 ? 
             LayerMask.NameToLayer("Selectable") : 0;
             
-        // Ensure all child objects with renderers are also set to the correct layer
+        // Set child renderers to same layer
         foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>())
         {
             renderer.gameObject.layer = model.layer;
         }
         
-        // Add metadata component
+        // Add metadata
         SceneObjectMetadata metadata = model.AddComponent<SceneObjectMetadata>();
         metadata.Initialize(objData.object_id, objData.modelUrl);
         
         // Add colliders if needed
         if (model.GetComponent<Collider>() == null)
         {
-            // Try to find a mesh in the hierarchy for the collider
             Mesh colliderMesh = null;
+            GameObject meshHolder = null;
             
-            // First check MeshFilters
-            MeshFilter firstMeshFilter = model.GetComponentInChildren<MeshFilter>();
-            if (firstMeshFilter != null && firstMeshFilter.sharedMesh != null)
+            List<MeshFilter> meshFilters = new List<MeshFilter>(model.GetComponentsInChildren<MeshFilter>());
+            
+            // Find simple mesh to use for collider
+            foreach (var filter in meshFilters)
             {
-                colliderMesh = firstMeshFilter.sharedMesh;
+                if (filter != null && filter.sharedMesh != null && 
+                    filter.sharedMesh.triangles.Length / 3 < 200)
+                {
+                    colliderMesh = filter.sharedMesh;
+                    meshHolder = filter.gameObject;
+                    break;
+                }
             }
-            // If no MeshFilter found, try SkinnedMeshRenderers
-            else
+            
+            // Try first available mesh if no simple one found
+            if (colliderMesh == null && meshFilters.Count > 0)
+            {
+                var firstMesh = meshFilters[0];
+                if (firstMesh != null && firstMesh.sharedMesh != null)
+                {
+                    colliderMesh = firstMesh.sharedMesh;
+                    meshHolder = firstMesh.gameObject;
+                }
+            }
+            
+            // Try skinned mesh if no mesh filter found
+            if (colliderMesh == null)
             {
                 SkinnedMeshRenderer firstSkinnedMesh = model.GetComponentInChildren<SkinnedMeshRenderer>();
                 if (firstSkinnedMesh != null && firstSkinnedMesh.sharedMesh != null)
                 {
                     colliderMesh = firstSkinnedMesh.sharedMesh;
+                    meshHolder = firstSkinnedMesh.gameObject;
                 }
             }
             
             if (colliderMesh != null)
             {
-                MeshCollider collider = model.AddComponent<MeshCollider>();
-                collider.sharedMesh = colliderMesh;
-                collider.convex = true;
-                Debug.Log($"Added MeshCollider to {objData.object_id}");
+                int triangleCount = colliderMesh.triangles.Length / 3;
+                
+                if (triangleCount > 2000)
+                {
+                    Debug.Log($"Mesh for {objData.object_id} is very complex ({triangleCount} triangles). Creating compound colliders.");
+                    
+                    bool addedChildColliders = false;
+                    foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>())
+                    {
+                        if (renderer.gameObject.GetComponent<Collider>() == null)
+                        {
+                            BoxCollider boxCol = renderer.gameObject.AddComponent<BoxCollider>();
+                            addedChildColliders = true;
+                        }
+                    }
+                    
+                    if (!addedChildColliders || meshFilters.Count <= 1)
+                    {
+                        BoxCollider rootCollider = model.AddComponent<BoxCollider>();
+                        Debug.Log($"Added BoxCollider to {objData.object_id} due to high complexity");
+                    }
+                    else
+                    {
+                        Debug.Log($"Added compound colliders to {objData.object_id}");
+                    }
+                }
+                else if (triangleCount > 250)
+                {
+                    MeshCollider collider = meshHolder.AddComponent<MeshCollider>();
+                    collider.sharedMesh = colliderMesh;
+                    collider.convex = false;
+                    Debug.Log($"Added non-convex MeshCollider to {objData.object_id} ({triangleCount} triangles)");
+                }
+                else
+                {
+                    try
+                    {
+                        MeshCollider collider = meshHolder.AddComponent<MeshCollider>();
+                        collider.sharedMesh = colliderMesh;
+                        collider.convex = true;
+                        Debug.Log($"Added convex MeshCollider to {objData.object_id} ({triangleCount} triangles)");
+                    }
+                    catch (Exception e)
+                    {
+                        MeshCollider collider = meshHolder.GetComponent<MeshCollider>();
+                        if (collider != null)
+                        {
+                            collider.convex = false;
+                            Debug.Log($"Falling back to non-convex collider for {objData.object_id} due to: {e.Message}");
+                        }
+                        else
+                        {
+                            BoxCollider boxCollider = meshHolder.AddComponent<BoxCollider>();
+                            Debug.Log($"Added BoxCollider to {objData.object_id} after convex mesh error");
+                        }
+                    }
+                }
             }
             else
             {
-                // Fallback to a default collider
                 BoxCollider boxCollider = model.AddComponent<BoxCollider>();
-                Debug.Log($"Added BoxCollider to {objData.object_id} as fallback");
+                Debug.Log($"Added BoxCollider to {objData.object_id} as fallback (no suitable mesh found)");
             }
         }
     }

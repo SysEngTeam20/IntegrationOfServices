@@ -12,7 +12,7 @@ public class PortaltServerConfigV : ScriptableObject {
     [Tooltip("Join code for accessing content from the Portalt server")]
     public string joinCode = "";
     
-    public string apiBaseUrl => $"http://{serverIp}:{serverPort}/api";
+    public string apiBaseUrl => $"https://portalt.vercel.app/api";
     
     // The primary method for the viewer to access content
     public string GetActivityJoinUrl() => $"{apiBaseUrl}/public/activity-join?joinCode={joinCode}";

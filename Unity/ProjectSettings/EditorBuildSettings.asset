@@ -8,10 +8,10 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Samples/Ubiq/1.0.0-pre.11/Demo (XRI)/Demo.unity
     guid: 2de505d34345ab340bdde30d419b24eb
-  - enabled: 1
+  - enabled: 0
     path: Assets/Apps/Custom Viewer Sample/Base.unity
     guid: 2ec886a48212849d8affdb1b1aef0a2f
-  - enabled: 0
+  - enabled: 1
     path: Assets/Apps/Custom Admin Sample/Base.unity
     guid: be49106e1fa964a5697ac5b2d021d133
   - enabled: 0

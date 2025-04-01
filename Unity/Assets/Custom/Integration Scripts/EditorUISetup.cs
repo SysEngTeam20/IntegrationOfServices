@@ -33,14 +33,17 @@ public class EditorUISetup : MonoBehaviour
     
     // Config UI References
     [Header("Config UI References")]
-    public TMP_InputField serverIpInput;
-    public TMP_InputField serverPortInput;
     public TMP_InputField pairingCodeInput;
     public Button saveConfigButton;
     public Button toggleConfigButton;
     public GameObject configPanel;
     
+    [Header("Instructions UI")]
+    public Button toggleInstructionsButton;
+    public GameObject instructionsPanel;
+    
     private bool configPanelVisible = false;
+    private bool instructionsPanelVisible = false;
     
     #if UNITY_EDITOR
     [ContextMenu("Create Editor UI")]
@@ -151,9 +154,9 @@ public class EditorUISetup : MonoBehaviour
         // Configure config toggle button
         RectTransform configToggleRect = toggleConfigButton.GetComponent<RectTransform>();
         configToggleRect.anchorMin = new Vector2(0.85f, 0.5f);
-        configToggleRect.anchorMax = new Vector2(1f, 0.9f);
+        configToggleRect.anchorMax = new Vector2(0.92f, 0.9f);
         configToggleRect.anchoredPosition = new Vector2(-5, 0);
-        configToggleRect.sizeDelta = new Vector2(-10, 0);
+        configToggleRect.sizeDelta = new Vector2(-5, 0);
         
         TextMeshProUGUI configButtonText = toggleConfigButton.GetComponentInChildren<TextMeshProUGUI>();
         if (configButtonText != null)
@@ -161,10 +164,23 @@ public class EditorUISetup : MonoBehaviour
             configButtonText.text = "Config";
         }
         
-        // In Editor, we don't need to connect the listener here
-        // Leave this for Start() method to handle at runtime
-        // Just log that we created the button
-        Debug.Log("Created config toggle button - listener will be connected at runtime");
+        // Create instructions toggle button
+        GameObject instructionsToggleObj = Instantiate(buttonPrefab.gameObject, panel.transform);
+        instructionsToggleObj.name = "ToggleInstructionsButton";
+        toggleInstructionsButton = instructionsToggleObj.GetComponent<Button>();
+        
+        // Configure instructions toggle button
+        RectTransform instructionsToggleRect = toggleInstructionsButton.GetComponent<RectTransform>();
+        instructionsToggleRect.anchorMin = new Vector2(0.92f, 0.5f);
+        instructionsToggleRect.anchorMax = new Vector2(1f, 0.9f);
+        instructionsToggleRect.anchoredPosition = new Vector2(-5, 0);
+        instructionsToggleRect.sizeDelta = new Vector2(-5, 0);
+        
+        TextMeshProUGUI instructionsButtonText = toggleInstructionsButton.GetComponentInChildren<TextMeshProUGUI>();
+        if (instructionsButtonText != null)
+        {
+            instructionsButtonText.text = "Help";
+        }
         
         // Create status label
         GameObject statusLabel = new GameObject("StatusLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -197,6 +213,9 @@ public class EditorUISetup : MonoBehaviour
         
         // Create configuration panel
         CreateConfigPanel();
+        
+        // Create instructions panel
+        CreateInstructionsPanel();
         
         // Connect UI to integration manager
         if (integrationManager != null)
@@ -233,12 +252,12 @@ public class EditorUISetup : MonoBehaviour
         Image configPanelImage = configPanelObj.AddComponent<Image>();
         configPanelImage.color = new Color(0.15f, 0.15f, 0.15f, 0.9f);
         
-        // Configure the panel's RectTransform
+        // Configure the panel's RectTransform - make it smaller now that we only have one field
         RectTransform configPanelRect = configPanelObj.GetComponent<RectTransform>();
         configPanelRect.anchorMin = new Vector2(0.5f, 0.5f);
         configPanelRect.anchorMax = new Vector2(0.5f, 0.5f);
         configPanelRect.pivot = new Vector2(0.5f, 0.5f);
-        configPanelRect.sizeDelta = new Vector2(400, 250);
+        configPanelRect.sizeDelta = new Vector2(400, 160); // Reduced height since we now only have one input field
         configPanelRect.anchoredPosition = Vector2.zero;
         
         configPanel = configPanelObj;
@@ -255,19 +274,13 @@ public class EditorUISetup : MonoBehaviour
         titleRect.anchoredPosition = new Vector2(0, 0);
         
         TextMeshProUGUI titleText = titleObj.GetComponent<TextMeshProUGUI>();
-        titleText.text = "Server Configuration";
+        titleText.text = "Cloud Connection";
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.fontSize = 18;
         titleText.fontStyle = FontStyles.Bold;
         
-        // Create Server IP Input
-        CreateConfigInput("ServerIP", "Server IP:", 0, out serverIpInput);
-        
-        // Create Server Port Input
-        CreateConfigInput("ServerPort", "Server Port:", 1, out serverPortInput);
-        
-        // Create Pairing Code Input
-        CreateConfigInput("PairingCode", "Pairing Code:", 2, out pairingCodeInput);
+        // Create Pairing Code Input (only input field now)
+        CreateConfigInput("PairingCode", "Pairing Code:", 0, out pairingCodeInput);
         
         // Create Save Config Button
         GameObject saveConfigObj = Instantiate(buttonPrefab.gameObject, configPanelObj.transform);
@@ -284,7 +297,7 @@ public class EditorUISetup : MonoBehaviour
         TextMeshProUGUI saveConfigText = saveConfigButton.GetComponentInChildren<TextMeshProUGUI>();
         if (saveConfigText != null)
         {
-            saveConfigText.text = "Save & Apply";
+            saveConfigText.text = "Connect";
         }
         
         // Add onClick listener for save button
@@ -303,10 +316,8 @@ public class EditorUISetup : MonoBehaviour
         // Load current values
         if (serverConfig != null)
         {
-            serverIpInput.text = serverConfig.serverIp;
-            serverPortInput.text = serverConfig.serverPort.ToString();
             pairingCodeInput.text = serverConfig.pairingCode;
-            Debug.Log("Loaded initial values from server config");
+            Debug.Log("Loaded initial pairing code from server config");
         }
         else
         {
@@ -388,21 +399,7 @@ public class EditorUISetup : MonoBehaviour
             return;
         }
         
-        // Update the config
-        serverConfig.serverIp = serverIpInput.text;
-        Debug.Log($"Set server IP to: {serverIpInput.text}");
-        
-        // Try to parse port
-        if (int.TryParse(serverPortInput.text, out int port))
-        {
-            serverConfig.serverPort = port;
-            Debug.Log($"Set server port to: {port}");
-        }
-        else
-        {
-            Debug.LogError("Invalid port number!");
-        }
-        
+        // Update the config - only pairing code is needed now
         serverConfig.pairingCode = pairingCodeInput.text;
         Debug.Log($"Set pairing code to: {pairingCodeInput.text}");
         
@@ -644,26 +641,13 @@ public class EditorUISetup : MonoBehaviour
             return;
         }
         
-        if (serverIpInput == null || serverPortInput == null || pairingCodeInput == null)
+        if (pairingCodeInput == null)
         {
-            Debug.LogError("Input field references are missing!");
+            Debug.LogError("Pairing code input field reference is missing!");
             return;
         }
         
-        // Update config
-        serverConfig.serverIp = serverIpInput.text;
-        Debug.Log($"Set server IP to: {serverIpInput.text}");
-        
-        if (int.TryParse(serverPortInput.text, out int port))
-        {
-            serverConfig.serverPort = port;
-            Debug.Log($"Set server port to: {port}");
-        }
-        else
-        {
-            Debug.LogError("Invalid port number!");
-        }
-        
+        // Update config - only pairing code is needed now
         serverConfig.pairingCode = pairingCodeInput.text;
         Debug.Log($"Set pairing code to: {pairingCodeInput.text}");
         
@@ -1062,6 +1046,36 @@ public class EditorUISetup : MonoBehaviour
         {
             Debug.LogError("No reference to save config button!");
         }
+        
+        // Set up instructions toggle button
+        if (toggleInstructionsButton != null)
+        {
+            // Remove any existing listeners to avoid duplicates
+            toggleInstructionsButton.onClick.RemoveAllListeners();
+            
+            // Connect the listener
+            toggleInstructionsButton.onClick.AddListener(() => {
+                ToggleInstructionsPanel();
+            });
+            
+            Debug.Log("Set up instructions toggle button onClick listener");
+        }
+        else
+        {
+            Debug.LogWarning("No reference to toggle instructions button!");
+            
+            // Try to find it
+            toggleInstructionsButton = mainCanvas?.transform.Find("ControlPanel/ToggleInstructionsButton")?.GetComponent<Button>();
+            
+            if (toggleInstructionsButton != null)
+            {
+                toggleInstructionsButton.onClick.RemoveAllListeners();
+                toggleInstructionsButton.onClick.AddListener(() => {
+                    ToggleInstructionsPanel();
+                });
+                Debug.Log("Found and connected instructions toggle button");
+            }
+        }
     }
     
     // Public method that can be called from the inspector to show configuration panel
@@ -1107,20 +1121,8 @@ public class EditorUISetup : MonoBehaviour
             }
         }
         
-        // Make sure we have valid references for input fields
-        if (serverIpInput == null || serverPortInput == null || pairingCodeInput == null)
-        {
-            // Try to find them
-            serverIpInput = configPanel.transform.Find("ServerIPContainer/ServerIPInput")?.GetComponent<TMP_InputField>();
-            serverPortInput = configPanel.transform.Find("ServerPortContainer/ServerPortInput")?.GetComponent<TMP_InputField>();
-            pairingCodeInput = configPanel.transform.Find("PairingCodeContainer/PairingCodeInput")?.GetComponent<TMP_InputField>();
-            
-            if (serverIpInput == null || serverPortInput == null || pairingCodeInput == null)
-            {
-                Debug.LogError("Could not find all input fields in the config panel");
-                return;
-            }
-        }
+        // Validate input fields
+        ValidateConfigPanelInputs();
         
         // Make sure we have a valid reference for save button
         if (saveConfigButton == null)
@@ -1148,16 +1150,14 @@ public class EditorUISetup : MonoBehaviour
         }
         
         // Update values from config
-        if (serverConfig != null)
+        if (serverConfig != null && pairingCodeInput != null)
         {
-            serverIpInput.text = serverConfig.serverIp;
-            serverPortInput.text = serverConfig.serverPort.ToString();
             pairingCodeInput.text = serverConfig.pairingCode;
-            Debug.Log("Updated input fields with current config values");
+            Debug.Log("Updated input field with current config value");
         }
         else
         {
-            Debug.LogError("Server config is null");
+            Debug.LogError("Server config or input field is null");
         }
         
         // Show the panel
@@ -1323,12 +1323,12 @@ public class EditorUISetup : MonoBehaviour
         Image configPanelImage = configPanelObj.AddComponent<Image>();
         configPanelImage.color = new Color(0.15f, 0.15f, 0.15f, 0.9f);
         
-        // Configure the panel's RectTransform
+        // Configure the panel's RectTransform - make it smaller now that we only have one field
         RectTransform configPanelRect = configPanelObj.GetComponent<RectTransform>();
         configPanelRect.anchorMin = new Vector2(0.5f, 0.5f);
         configPanelRect.anchorMax = new Vector2(0.5f, 0.5f);
         configPanelRect.pivot = new Vector2(0.5f, 0.5f);
-        configPanelRect.sizeDelta = new Vector2(400, 250);
+        configPanelRect.sizeDelta = new Vector2(400, 160); // Reduced height since we now only have one input field
         configPanelRect.anchoredPosition = Vector2.zero;
         
         configPanel = configPanelObj;
@@ -1345,19 +1345,13 @@ public class EditorUISetup : MonoBehaviour
         titleRect.anchoredPosition = new Vector2(0, 0);
         
         TextMeshProUGUI titleText = titleObj.GetComponent<TextMeshProUGUI>();
-        titleText.text = "Server Configuration";
+        titleText.text = "Cloud Connection";
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.fontSize = 18;
         titleText.fontStyle = FontStyles.Bold;
         
-        // Create Server IP Input
-        CreateConfigInputRuntime("ServerIP", "Server IP:", 0, out serverIpInput);
-        
-        // Create Server Port Input
-        CreateConfigInputRuntime("ServerPort", "Server Port:", 1, out serverPortInput);
-        
-        // Create Pairing Code Input
-        CreateConfigInputRuntime("PairingCode", "Pairing Code:", 2, out pairingCodeInput);
+        // Create Pairing Code Input (only input field now)
+        CreateConfigInputRuntime("PairingCode", "Pairing Code:", 0, out pairingCodeInput);
         
         // Create Save Config Button
         GameObject saveConfigObj = new GameObject("SaveConfigButton");
@@ -1391,7 +1385,7 @@ public class EditorUISetup : MonoBehaviour
             textRect.offsetMax = Vector2.zero;
             
             TextMeshProUGUI buttonText = textObj.GetComponent<TextMeshProUGUI>();
-            buttonText.text = "Save & Apply";
+            buttonText.text = "Connect";
             buttonText.alignment = TextAlignmentOptions.Center;
             buttonText.fontSize = 14;
         }
@@ -1409,7 +1403,7 @@ public class EditorUISetup : MonoBehaviour
         TextMeshProUGUI saveConfigText = saveConfigObj.GetComponentInChildren<TextMeshProUGUI>();
         if (saveConfigText != null)
         {
-            saveConfigText.text = "Save & Apply";
+            saveConfigText.text = "Connect";
         }
         
         // Add onClick listener for save button
@@ -1422,10 +1416,8 @@ public class EditorUISetup : MonoBehaviour
         // Load current values
         if (serverConfig != null)
         {
-            serverIpInput.text = serverConfig.serverIp;
-            serverPortInput.text = serverConfig.serverPort.ToString();
             pairingCodeInput.text = serverConfig.pairingCode;
-            Debug.Log("Loaded initial values from server config");
+            Debug.Log("Loaded initial pairing code from server config");
         }
         else
         {
@@ -1539,5 +1531,479 @@ public class EditorUISetup : MonoBehaviour
         inputRect.pivot = new Vector2(0.5f, 0.5f);
         inputRect.sizeDelta = new Vector2(-20, 30);
         inputRect.anchoredPosition = new Vector2(0, 0);
+    }
+    
+    // Make sure we have valid references for input fields
+    private void ValidateConfigPanelInputs()
+    {
+        if (pairingCodeInput == null)
+        {
+            // Try to find it
+            pairingCodeInput = configPanel.transform.Find("PairingCodeContainer/PairingCodeInput")?.GetComponent<TMP_InputField>();
+            
+            if (pairingCodeInput == null)
+            {
+                Debug.LogError("Could not find pairing code input field in the config panel");
+            }
+        }
+    }
+    
+    private void CreateInstructionsPanel()
+    {
+        // Destroy any existing instructions panel
+        if (instructionsPanel != null)
+        {
+            DestroyImmediate(instructionsPanel);
+            instructionsPanel = null;
+        }
+        
+        // Create a panel for instructions
+        GameObject instructionsPanelObj = new GameObject("InstructionsPanel");
+        instructionsPanelObj.transform.SetParent(mainCanvas.transform, false);
+        
+        // Add Image component for visual
+        Image instructionsPanelImage = instructionsPanelObj.AddComponent<Image>();
+        instructionsPanelImage.color = new Color(0.1f, 0.1f, 0.2f, 0.95f);
+        
+        // Configure the panel's RectTransform
+        RectTransform instructionsPanelRect = instructionsPanelObj.GetComponent<RectTransform>();
+        instructionsPanelRect.anchorMin = new Vector2(0.5f, 0.5f);
+        instructionsPanelRect.anchorMax = new Vector2(0.5f, 0.5f);
+        instructionsPanelRect.pivot = new Vector2(0.5f, 0.5f);
+        instructionsPanelRect.sizeDelta = new Vector2(600, 500);
+        instructionsPanelRect.anchoredPosition = Vector2.zero;
+        
+        instructionsPanel = instructionsPanelObj;
+        
+        // Create title
+        GameObject titleObj = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
+        titleObj.transform.SetParent(instructionsPanelObj.transform, false);
+        RectTransform titleRect = titleObj.GetComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0, 1);
+        titleRect.anchorMax = new Vector2(1, 1);
+        titleRect.pivot = new Vector2(0.5f, 1);
+        titleRect.sizeDelta = new Vector2(0, 40); // Slightly smaller title
+        titleRect.anchoredPosition = new Vector2(0, 0);
+        
+        TextMeshProUGUI titleText = titleObj.GetComponent<TextMeshProUGUI>();
+        titleText.text = "Instructions & Controls";
+        titleText.alignment = TextAlignmentOptions.Center;
+        titleText.fontSize = 24;
+        titleText.fontStyle = FontStyles.Bold;
+        titleText.color = Color.white;
+        
+        // Create scrollable content area with improved margins
+        GameObject scrollViewObj = new GameObject("ScrollView", typeof(RectTransform));
+        scrollViewObj.transform.SetParent(instructionsPanelObj.transform, false);
+        RectTransform scrollViewRect = scrollViewObj.GetComponent<RectTransform>();
+        scrollViewRect.anchorMin = new Vector2(0, 0);
+        scrollViewRect.anchorMax = new Vector2(1, 1);
+        scrollViewRect.offsetMin = new Vector2(10, 10); // Bottom margin
+        scrollViewRect.offsetMax = new Vector2(-10, -45); // Top margin (below title)
+        
+        // Add the scroll rect component
+        ScrollRect scrollRect = scrollViewObj.AddComponent<ScrollRect>();
+        scrollRect.name = "InstructionsScrollRect"; // Named for easier finding
+        
+        // Create the content container with increased height and proper padding
+        GameObject contentObj = new GameObject("Content", typeof(RectTransform));
+        contentObj.transform.SetParent(scrollViewObj.transform, false);
+        RectTransform contentRect = contentObj.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0, 1);
+        contentRect.anchorMax = new Vector2(1, 1);
+        contentRect.pivot = new Vector2(0.5f, 1);
+        contentRect.sizeDelta = new Vector2(-20, 1500); // More height to ensure all content fits
+        contentRect.anchoredPosition = new Vector2(0, 0);
+        
+        // Set scroll rect properties
+        scrollRect.content = contentRect;
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.scrollSensitivity = 10;
+        scrollRect.viewport = scrollViewRect;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped; // Prevent overscrolling
+        scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        scrollRect.verticalNormalizedPosition = 1.0f; // Start at the top
+        
+        // Add mask with proper size
+        Image scrollViewImage = scrollViewObj.AddComponent<Image>();
+        scrollViewImage.color = new Color(0.1f, 0.1f, 0.1f, 0.1f);
+        Mask mask = scrollViewObj.AddComponent<Mask>();
+        mask.showMaskGraphic = false;
+        
+        // Add vertical scrollbar
+        GameObject scrollbarObj = new GameObject("Scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+        scrollbarObj.transform.SetParent(scrollViewObj.transform, false);
+        RectTransform scrollbarRect = scrollbarObj.GetComponent<RectTransform>();
+        scrollbarRect.anchorMin = new Vector2(1, 0);
+        scrollbarRect.anchorMax = new Vector2(1, 1);
+        scrollbarRect.pivot = new Vector2(1, 0.5f);
+        scrollbarRect.sizeDelta = new Vector2(15, 0);
+        scrollbarRect.anchoredPosition = new Vector2(15, 0);
+        
+        Scrollbar scrollbar = scrollbarObj.GetComponent<Scrollbar>();
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+        scrollRect.verticalScrollbar = scrollbar;
+        
+        // Add scrollbar handle
+        GameObject handleObj = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+        handleObj.transform.SetParent(scrollbarObj.transform, false);
+        Image handleImage = handleObj.GetComponent<Image>();
+        handleImage.color = new Color(0.7f, 0.7f, 0.7f, 0.7f);
+        
+        RectTransform handleRect = handleObj.GetComponent<RectTransform>();
+        handleRect.pivot = new Vector2(0.5f, 0.5f);
+        handleRect.anchorMin = new Vector2(0, 0);
+        handleRect.anchorMax = new Vector2(1, 1);
+        handleRect.sizeDelta = Vector2.zero;
+        
+        scrollbar.targetGraphic = handleImage;
+        scrollbar.handleRect = handleRect;
+        
+        // Add the instructions text with improved padding
+        GameObject instructionsTextObj = new GameObject("InstructionsText", typeof(RectTransform), typeof(TextMeshProUGUI));
+        instructionsTextObj.transform.SetParent(contentObj.transform, false);
+        RectTransform instructionsTextRect = instructionsTextObj.GetComponent<RectTransform>();
+        instructionsTextRect.anchorMin = Vector2.zero;
+        instructionsTextRect.anchorMax = Vector2.one;
+        instructionsTextRect.offsetMin = new Vector2(10, 40); // More bottom padding
+        instructionsTextRect.offsetMax = new Vector2(-10, -70); // Much more top padding to prevent cutoff
+        
+        TextMeshProUGUI instructionsText = instructionsTextObj.GetComponent<TextMeshProUGUI>();
+        instructionsText.fontSize = 17;
+        instructionsText.alignment = TextAlignmentOptions.Left;
+        instructionsText.color = Color.white;
+        instructionsText.enableWordWrapping = true;
+        instructionsText.margin = new Vector4(0, 20, 0, 10); // More top margin in the text
+        
+        // Set the instructions content with updated key information
+        instructionsText.text = 
+@"<b><size=20>Movement Controls</size></b>
+
+• <b>W</b> - Move forward
+• <b>S</b> - Move backward
+• <b>A</b> - Strafe left
+• <b>D</b> - Strafe right
+• <b>Q</b> - Move down
+• <b>E</b> - Move up
+• <b>Mouse</b> - Look around
+
+<b><size=20>Selection & Interaction</size></b>
+
+• <b>Left Click</b> - Select/deselect objects
+• <b>Tab</b> - Toggle between UI mode and Tractor Beam mode
+• <b>V</b> - Toggle collider visualization (helps to see clickable areas)
+• <b>Shift</b> - When object is selected, cycle between modification modes (position, scale, rotation)
+• <b>R</b> - When rotating an object, cycle between rotation axes
+• <b>Mouse Scroll Wheel</b> - Move objects closer/farther in position mode, scale up/down in scale mode, or rotate clockwise/counterclockwise in rotation mode
+
+<b><size=20>UI Elements</size></b>
+
+• <b>Activity Selector</b> - Choose which activity to load
+• <b>Scene Selector</b> - Choose which scene from the current activity to load
+• <b>Save Button</b> - Save changes to the current scene
+• <b>Config Button</b> - Configure the pairing code
+• <b>Help Button</b> - Show/hide this help screen
+
+<b><size=20>Configuration</size></b>
+
+• <b>Pairing Code</b> - Connect to the cloud admin dashboard
+• <b>Connect Button</b> - Apply configuration settings and connect
+
+<b><size=20>Tips & Tricks</size></b>
+
+• When in Tractor Beam mode, selected objects can be moved using the mouse.
+• Use the Shift key to cycle between Position, Scale, and Rotation modes for selected objects.
+• When in Rotation mode, use the R key to switch between X, Y, and Z rotation axes.
+• Use the V key to toggle visualization of colliders for easier selection.
+• For complex 3D models, colliders are automatically simplified to improve performance.
+• UI mode lets you interact with dropdowns and buttons, while Tractor Beam mode allows object manipulation.
+• All scenes and objects are stored in the cloud and can be accessed by multiple users.
+• Changes are synchronized between users when saved.
+
+<b><size=20>Troubleshooting</size></b>
+
+• If objects aren't selectable, check that you're in Tractor Beam mode (press Tab).
+• If you can't see any activities in the dropdown, verify your connection settings.
+• For very large models, collider visualization might take a moment to generate.
+• If you encounter any errors loading a scene, check your connection and try again.
+• The collider visualization feature was added because colliders are required for object selection, and some objects don't come with built-in colliders.
+• Colliders are added manually during the import process, and there's no way to ensure they perfectly fit the entire object.
+• Highlighting these colliders helps you know exactly where to click for object selection, which is especially useful for large objects with complex shapes.
+
+
+
+
+
+
+";
+        
+        // Add a helper spacer at the top to prevent cutoff
+        GameObject topSpacer = new GameObject("TopSpacer", typeof(RectTransform));
+        topSpacer.transform.SetParent(contentObj.transform, false);
+        RectTransform topSpacerRect = topSpacer.GetComponent<RectTransform>();
+        topSpacerRect.anchorMin = new Vector2(0, 1);
+        topSpacerRect.anchorMax = new Vector2(1, 1);
+        topSpacerRect.pivot = new Vector2(0.5f, 1);
+        topSpacerRect.sizeDelta = new Vector2(0, 40);
+        topSpacerRect.anchoredPosition = new Vector2(0, 0);
+        
+        // Hide panel by default
+        instructionsPanel.SetActive(false);
+        instructionsPanelVisible = false;
+    }
+    
+    public void ToggleInstructionsPanel()
+    {
+        if (instructionsPanel == null)
+        {
+            // Try to find it or create it
+            instructionsPanel = mainCanvas?.transform.Find("InstructionsPanel")?.gameObject;
+            
+            if (instructionsPanel == null)
+            {
+                #if UNITY_EDITOR
+                CreateInstructionsPanel();
+                #else
+                CreateInstructionsPanelRuntime();
+                #endif
+            }
+        }
+        
+        // Toggle visibility
+        instructionsPanelVisible = !instructionsPanelVisible;
+        instructionsPanel.SetActive(instructionsPanelVisible);
+        
+        // If we're showing the panel, make sure we reset the scroll position to top
+        if (instructionsPanelVisible)
+        {
+            ResetInstructionsScrollPosition();
+        }
+        
+        Debug.Log($"Instructions panel is now {(instructionsPanelVisible ? "visible" : "hidden")}");
+    }
+    
+    // Reset scroll position to top when showing instructions
+    private void ResetInstructionsScrollPosition()
+    {
+        if (instructionsPanel != null)
+        {
+            // Find the ScrollRect component
+            ScrollRect scrollRect = instructionsPanel.GetComponentInChildren<ScrollRect>();
+            if (scrollRect != null)
+            {
+                // Set scroll position to top (1.0f is top, 0.0f is bottom)
+                scrollRect.normalizedPosition = new Vector2(0, 1);
+                Debug.Log("Reset instructions scroll position to top");
+            }
+        }
+    }
+    
+    // Runtime-compatible create instructions panel
+    private void CreateInstructionsPanelRuntime()
+    {
+        // Implementation similar to CreateInstructionsPanel but runtime compatible
+        
+        // Destroy any existing instructions panel
+        if (instructionsPanel != null)
+        {
+            Destroy(instructionsPanel);
+            instructionsPanel = null;
+        }
+        
+        // Create a panel for instructions
+        GameObject instructionsPanelObj = new GameObject("InstructionsPanel");
+        instructionsPanelObj.transform.SetParent(mainCanvas.transform, false);
+        
+        // Add Image component for visual
+        Image instructionsPanelImage = instructionsPanelObj.AddComponent<Image>();
+        instructionsPanelImage.color = new Color(0.1f, 0.1f, 0.2f, 0.95f);
+        
+        // Configure the panel's RectTransform
+        RectTransform instructionsPanelRect = instructionsPanelObj.GetComponent<RectTransform>();
+        instructionsPanelRect.anchorMin = new Vector2(0.5f, 0.5f);
+        instructionsPanelRect.anchorMax = new Vector2(0.5f, 0.5f);
+        instructionsPanelRect.pivot = new Vector2(0.5f, 0.5f);
+        instructionsPanelRect.sizeDelta = new Vector2(600, 500);
+        instructionsPanelRect.anchoredPosition = Vector2.zero;
+        
+        instructionsPanel = instructionsPanelObj;
+        
+        // Create title
+        GameObject titleObj = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
+        titleObj.transform.SetParent(instructionsPanelObj.transform, false);
+        RectTransform titleRect = titleObj.GetComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0, 1);
+        titleRect.anchorMax = new Vector2(1, 1);
+        titleRect.pivot = new Vector2(0.5f, 1);
+        titleRect.sizeDelta = new Vector2(0, 40); // Slightly smaller title
+        titleRect.anchoredPosition = new Vector2(0, 0);
+        
+        TextMeshProUGUI titleText = titleObj.GetComponent<TextMeshProUGUI>();
+        titleText.text = "Instructions & Controls";
+        titleText.alignment = TextAlignmentOptions.Center;
+        titleText.fontSize = 24;
+        titleText.fontStyle = FontStyles.Bold;
+        titleText.color = Color.white;
+        
+        // Create scrollable content area with improved margins
+        GameObject scrollViewObj = new GameObject("ScrollView", typeof(RectTransform));
+        scrollViewObj.transform.SetParent(instructionsPanelObj.transform, false);
+        RectTransform scrollViewRect = scrollViewObj.GetComponent<RectTransform>();
+        scrollViewRect.anchorMin = new Vector2(0, 0);
+        scrollViewRect.anchorMax = new Vector2(1, 1);
+        scrollViewRect.offsetMin = new Vector2(10, 10); // Bottom margin
+        scrollViewRect.offsetMax = new Vector2(-10, -45); // Top margin (below title)
+        
+        // Add the scroll rect component
+        ScrollRect scrollRect = scrollViewObj.AddComponent<ScrollRect>();
+        scrollRect.name = "InstructionsScrollRect"; // Named for easier finding
+        
+        // Create the content container with increased height and proper padding
+        GameObject contentObj = new GameObject("Content", typeof(RectTransform));
+        contentObj.transform.SetParent(scrollViewObj.transform, false);
+        RectTransform contentRect = contentObj.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0, 1);
+        contentRect.anchorMax = new Vector2(1, 1);
+        contentRect.pivot = new Vector2(0.5f, 1);
+        contentRect.sizeDelta = new Vector2(-20, 1500); // More height to ensure all content fits
+        contentRect.anchoredPosition = new Vector2(0, 0);
+        
+        // Set scroll rect properties
+        scrollRect.content = contentRect;
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.scrollSensitivity = 10;
+        scrollRect.viewport = scrollViewRect;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped; // Prevent overscrolling
+        scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        scrollRect.verticalNormalizedPosition = 1.0f; // Start at the top
+        
+        // Add mask with proper size
+        Image scrollViewImage = scrollViewObj.AddComponent<Image>();
+        scrollViewImage.color = new Color(0.1f, 0.1f, 0.1f, 0.1f);
+        Mask mask = scrollViewObj.AddComponent<Mask>();
+        mask.showMaskGraphic = false;
+        
+        // Add vertical scrollbar
+        GameObject scrollbarObj = new GameObject("Scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+        scrollbarObj.transform.SetParent(scrollViewObj.transform, false);
+        RectTransform scrollbarRect = scrollbarObj.GetComponent<RectTransform>();
+        scrollbarRect.anchorMin = new Vector2(1, 0);
+        scrollbarRect.anchorMax = new Vector2(1, 1);
+        scrollbarRect.pivot = new Vector2(1, 0.5f);
+        scrollbarRect.sizeDelta = new Vector2(15, 0);
+        scrollbarRect.anchoredPosition = new Vector2(15, 0);
+        
+        Scrollbar scrollbar = scrollbarObj.GetComponent<Scrollbar>();
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+        scrollRect.verticalScrollbar = scrollbar;
+        
+        // Add scrollbar handle
+        GameObject handleObj = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+        handleObj.transform.SetParent(scrollbarObj.transform, false);
+        Image handleImage = handleObj.GetComponent<Image>();
+        handleImage.color = new Color(0.7f, 0.7f, 0.7f, 0.7f);
+        
+        RectTransform handleRect = handleObj.GetComponent<RectTransform>();
+        handleRect.pivot = new Vector2(0.5f, 0.5f);
+        handleRect.anchorMin = new Vector2(0, 0);
+        handleRect.anchorMax = new Vector2(1, 1);
+        handleRect.sizeDelta = Vector2.zero;
+        
+        scrollbar.targetGraphic = handleImage;
+        scrollbar.handleRect = handleRect;
+        
+        // Add the instructions text with improved padding
+        GameObject instructionsTextObj = new GameObject("InstructionsText", typeof(RectTransform), typeof(TextMeshProUGUI));
+        instructionsTextObj.transform.SetParent(contentObj.transform, false);
+        RectTransform instructionsTextRect = instructionsTextObj.GetComponent<RectTransform>();
+        instructionsTextRect.anchorMin = Vector2.zero;
+        instructionsTextRect.anchorMax = Vector2.one;
+        instructionsTextRect.offsetMin = new Vector2(10, 40); // More bottom padding
+        instructionsTextRect.offsetMax = new Vector2(-10, -70); // Much more top padding to prevent cutoff
+        
+        TextMeshProUGUI instructionsText = instructionsTextObj.GetComponent<TextMeshProUGUI>();
+        instructionsText.fontSize = 17;
+        instructionsText.alignment = TextAlignmentOptions.Left;
+        instructionsText.color = Color.white;
+        instructionsText.enableWordWrapping = true;
+        instructionsText.margin = new Vector4(0, 20, 0, 10); // More top margin in the text
+        
+        // Add a helper spacer at the top to prevent cutoff
+        GameObject topSpacer = new GameObject("TopSpacer", typeof(RectTransform));
+        topSpacer.transform.SetParent(contentObj.transform, false);
+        RectTransform topSpacerRect = topSpacer.GetComponent<RectTransform>();
+        topSpacerRect.anchorMin = new Vector2(0, 1);
+        topSpacerRect.anchorMax = new Vector2(1, 1);
+        topSpacerRect.pivot = new Vector2(0.5f, 1);
+        topSpacerRect.sizeDelta = new Vector2(0, 40);
+        topSpacerRect.anchoredPosition = new Vector2(0, 0);
+        
+        // Set the instructions content with updated key information
+        instructionsText.text = 
+@"<b><size=20>Movement Controls</size></b>
+
+• <b>W</b> - Move forward
+• <b>S</b> - Move backward
+• <b>A</b> - Strafe left
+• <b>D</b> - Strafe right
+• <b>Q</b> - Move down
+• <b>E</b> - Move up
+• <b>Mouse</b> - Look around
+
+<b><size=20>Selection & Interaction</size></b>
+
+• <b>Left Click</b> - Select/deselect objects
+• <b>Tab</b> - Toggle between UI mode and Tractor Beam mode
+• <b>V</b> - Toggle collider visualization (helps to see clickable areas)
+• <b>Shift</b> - When object is selected, cycle between modification modes (position, scale, rotation)
+• <b>R</b> - When rotating an object, cycle between rotation axes
+• <b>Mouse Scroll Wheel</b> - Move objects closer/farther in position mode, scale up/down in scale mode, or rotate clockwise/counterclockwise in rotation mode
+
+<b><size=20>UI Elements</size></b>
+
+• <b>Activity Selector</b> - Choose which activity to load
+• <b>Scene Selector</b> - Choose which scene from the current activity to load
+• <b>Save Button</b> - Save changes to the current scene
+• <b>Config Button</b> - Configure the pairing code
+• <b>Help Button</b> - Show/hide this help screen
+
+<b><size=20>Configuration</size></b>
+
+• <b>Pairing Code</b> - Connect to the cloud admin dashboard
+• <b>Connect Button</b> - Apply configuration settings and connect
+
+<b><size=20>Tips & Tricks</size></b>
+
+• When in Tractor Beam mode, selected objects can be moved using the mouse.
+• Use the Shift key to cycle between Position, Scale, and Rotation modes for selected objects.
+• When in Rotation mode, use the R key to switch between X, Y, and Z rotation axes.
+• Use the V key to toggle visualization of colliders for easier selection.
+• For complex 3D models, colliders are automatically simplified to improve performance.
+• UI mode lets you interact with dropdowns and buttons, while Tractor Beam mode allows object manipulation.
+• All scenes and objects are stored in the cloud and can be accessed by multiple users.
+• Changes are synchronized between users when saved.
+
+<b><size=20>Troubleshooting</size></b>
+
+• If objects aren't selectable, check that you're in Tractor Beam mode (press Tab).
+• If you can't see any activities in the dropdown, verify your connection settings.
+• For very large models, collider visualization might take a moment to generate.
+• If you encounter any errors loading a scene, check your connection and try again.
+• The collider visualization feature was added because colliders are required for object selection, and some objects don't come with built-in colliders.
+• Colliders are added manually during the import process, and there's no way to ensure they perfectly fit the entire object.
+• Highlighting these colliders helps you know exactly where to click for object selection, which is especially useful for large objects with complex shapes.
+
+
+
+
+
+
+";
+        
+        // Hide panel by default
+        instructionsPanel.SetActive(false);
+        instructionsPanelVisible = false;
     }
 } 
