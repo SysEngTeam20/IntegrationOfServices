@@ -1,53 +1,41 @@
-# Welcome to Ubiq-Genie
+# IntegrationOfServices Repository
 
-![Illustrations of two sample demos available in Ubiq-Genie](header.png)
+## Overview
 
-Ubiq-Genie is a framework that enables you to build server-assisted collaborative mixed reality applications with Unity using the [Ubiq](https://ubiq.online) framework. This is particularly useful for building multi-user applications that require server-side processing such as generative models, conversational agents, and real-time transcription. For more information, please refer to the [Ubiq-Genie paper](https://ubiq.online/publication/ubiq-genie/).
+Welcome to the `IntegrationOfServices` project repository. This project contains the necessary assets and code for a Unity application focused on the creation, administration, and viewing of interactive 3D/VR environments.
 
-> [!NOTE]
-> Before starting with Ubiq-Genie, we recommend that you familiarize yourself with the Ubiq framework. For more information, see Ubiq's [documentation](https://ucl-vr.github.io/ubiq/) and [website](https://ubiq.online). Ubiq-Genie currently uses Ubiq [v1.0.0-pre7](https://github.com/UCL-VR/ubiq/releases/tag/unity-v1.0.0-pre.7).
+The core components allow for:
+1.  **Scene Administration:** An interface for selecting base scenes, adding/manipulating 3D models (position, rotation, scale), and saving the final configuration to a server.
+2.  **Scene Viewing:** An immersive experience (Desktop Simulator or VR) to load and explore the preconfigured scenes, featuring interaction and an AI voice assistant for enhanced engagement.
 
-## Initial Setup
+## Project Structure
 
-These instructions will get you a copy of the project up and running to run the samples and to start building your own applications. Ubiq-Genie supports Windows, macOS, and Linux. Ubiq-Genie has a server-client architecture, which means you may need to run the server on a separate machine from the Unity client.
+The primary application logic and assets are located within the `/Unity` directory. This directory contains the Unity project itself.
 
-### Server (Node.js)
+## Key Scenes & Documentation
 
-0. Install [Node.js](https://nodejs.org/en/download/) (v20 or later) and [Python](https://www.python.org/downloads/) (v3.10 or later).
+The Unity project features two main scenes, each with its own dedicated documentation detailing setup, features, build processes, and troubleshooting:
 
-1. Clone this repository somewhere on your machine (either local or remote).
+1.  **Admin Scene (`Admin.unity`)**
+    * **Purpose:** Used for configuring and customizing the 3D scenes and their object layouts.
+    * **Detailed README Location:** [`Unity/Assets/Apps/AdminScene/README.md`](./Unity/Assets/Apps/AdminScene/README.md)
+        *(Note: You should save the Admin Scene README content generated earlier into a file named `README.md` at this location.)*
 
-2. Open a terminal in the `Node` folder and run `npm install` to install the dependencies.
+2.  **Viewer Scene (`Viewer.unity`)**
+    * **Purpose:** Used for experiencing the configured scenes immersively, either via a desktop simulator or a VR headset, and interacting with an AI assistant.
+    * **Detailed README Location:** [`Unity/Assets/Apps/ViewerScene/README.md`](./Unity/Assets/Apps/ViewerScene/README.md)
+        *(Note: You should save the Viewer Scene README content generated earlier into a file named `README.md` at this location. Please double-check the directory name is exactly `ViewerScene` as there was a typo "VieweScene" in the path provided previously.)*
 
-3. Install the Python dependencies by navigating to the `Node/services` folder and running `pip install -r requirements.txt`. If you are using a virtual environment, activate it before running the command. Please ensure that you have the correct PyTorch and CUDA versions installed (see the [PyTorch website](https://pytorch.org/get-started/locally/) for more information).
+## Getting Started
 
-### Client (Unity)
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/SysEngTeam20/IntegrationOfServices.git](https://github.com/SysEngTeam20/IntegrationOfServices.git)
+    ```
+2.  **Ensure Prerequisites:** Install Unity Hub and the recommended Unity Editor version (6000.0.25f1 or later) with necessary modules (Android Build Support, etc.) as detailed in the scene-specific READMEs.
+3.  **Open the Unity Project:** Add and open the `/Unity` subfolder as a project in Unity Hub.
+4.  **Consult Scene READMEs:** Navigate to the specific README files linked above for detailed instructions on configuring, building, and running either the Admin or Viewer scene.
 
-1. Install [Unity](https://unity3d.com/get-unity/download) 2022.3.32f1 or later.
+---
 
-2. Clone this repository somewhere on your local machine.
-
-3. Add the `Unity` folder to Unity Hub and open the project in Unity.
-
-4. Navigate to Package Manager, click the Ubiq package (com.ucl.ubiq), navigate to the "Samples" tab, and import the "Demo (XRI)" sample. This will add the Unity XR Interaction Toolkit package to the project, as well as some scripts used by the Ubiq-Genie sample applications.
-
-> [!NOTE]
-> Read the README file in the corresponding folder in the `Node/apps` folder for further setup instructions. For a list of available samples, see the [Samples](#samples) section below.
-
-## Documentation
-
-For more information on how to use Ubiq-Genie, please refer to the README files in the `Node` folder.
-
-## Samples
-
-The `Node/apps` folder contains a number of samples that demonstrate how to use Ubiq-Genie, which each utilize one or more services defined in the `Node/services` folder. For more information on how to use these samples, please refer to the README files in the corresponding folders. Currently, the following collaborative sample applications are available:
-
-- [**Texture Generation**](Node/apps/texture_generation/README.md): generates a texture based on voice-based input and an optional ray to select target objects
-- [**Multi-user Conversational Agent**](Node/apps/conversational_agent/README.md): a conversational agent that can be interacted with by multiple users
-- [**Transcription**](Node/apps/transcription/README.md): transcribes and audio of each user in the room in separate files
-
-For a demo video of the samples, please refer to the [Ubiq-Genie demo video](https://youtu.be/cGz0z9BIgQk).
-
-## Support
-
-For any questions, please use the Discussions tab on GitHub or send a message in the *ubiq-genie* channel in the [Ubiq Discord server](https://discord.gg/cZYzdcxAAB). For bug reports, please use the Issues tab on GitHub.
+*This README provides a general overview. For specific instructions, please refer to the linked README files within the respective scene directories.*
